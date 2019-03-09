@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Alpha Channel Steganography</title>
+	</head>
+	<body>
+		<img id="image"></img>
+		
+		<div id="float">
+			<label id="upload_image_label" for="upload_image" class="button">Upload Image
+				<input id="upload_image" type="file" class="input"></input>
+			</label>
+			<span>|</span>
+			<input id="encode_message" type="text" class="text" placeholder="Encode Message"></input>
+			<label id="submit_message_label" for="submit_message" class="button" onclick="addMessage()">Submit
+				<input id="submit_message" type="button" class="input"></input>
+			</label>
+			<span>|</span>
+			<label id="check_image_label" for="check_image" class="button">Check Image
+				<input id="check_image" type="button" class="input" onclick="getOrCheckImage()"></input>
+			</label>
+			<span>|</span>
+			<label id="to_base64_label" for="to_base64" class="button">To Base64
+				<input id="to_base64" type="button" class="input" onclick="toBase64()"></input>
+			</label>
+			<span>|</span>
+			<label id="download_png_label" for="download_png" class="button">Download PNG
+				<input id="download_png" type="button" class="input" onclick="downloadPNG()"></input>
+			</label>
+		</div>
+		<br>
+		<canvas id="canvas" width="0px" height="0px"></canvas>
+		
+		<style>
+			.button
+			{
+				display: inline-block;
+				border: 2px solid black;
+				padding: 1px 10px 1px 10px;
+				font-weight: bold;
+				vertical-align: top;
+				background: white;
+				font-family: "Times New Roman", Times, Serif;
+				font-size: 12pt;
+				-webkit-transition: .2s;
+				transition: background .2s;
+			}
+			
+			.button:hover
+			{
+				background: #f2f2f2;
+			}
+			
+			.text
+			{
+				display: inline-block;
+				border: 2px solid black;
+				padding: 1px 10px 1px 10px;
+				vertical-align: top;
+				text-align: center;
+				min-width: 100px;
+				min-height: 19px;
+				color: black;
+				font-family: "Times New Roman", Times, Serif;
+				font-size: 12pt;
+				-webkit-transition: .2s;
+				transition: background .2s;
+			}
+			
+			.text:hover
+			{
+				background: #f2f2f2;
+			}
+			
+			.text:focus
+			{
+				background: #f2f2f2;
+			}
+			
+			::-webkit-input-placeholder
+			{
+				align-text: center;
+				font-weight: bold;
+				font-family: "Times New Roman", Times, Serif;
+				color: black;
+				-webkit-transition: .2s;
+				transition: color .2s;
+			}
+			
+			.text:hover::-webkit-input-placeholder
+			{
+				color: #555;
+			}
+			
+			.text:focus::-webkit-input-placeholder
+			{
+				color: #555;
+			}
+			
+			p
+			{
+				padding: 1px 10px 1px 10px;
+				font-weight: bold;
+			}
+			
+			canvas
+			{
+				border: 1.5px dotted black;
+				display: none;
+			}
+			
+			#colorCanvas
+			{
+				position: relative;
+				top: 1.5px;
+			}
+			
+			.input, #image
+			{
+				display: none;
+			}
+		</style>
+		
+		<script>
+			var input = document.getElementById('upload_image');
+			var canvas = document.getElementById('canvas');
+			var ogCanvas = document.createElement('canvas');
+			var ctx = canvas.getContext('2d');
+			var ctx3 = ogCanvas.getContext('2d');
+			var image = document.getElementById('image');
+			var imgName;
+			var bitMessage;
+			var encoding = false;
+			ctx.imageSmoothingEnabled = false;
+			
+			var charTable = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+			var charArray = (() => {
+				let array = [];
+				let charCode = "";
+				for (var a = 0; a < charTable.length; a++) {
+					charCode = (a + 1).toString(2);
+					while (charCode.length < 6)
+						charCode = "0" + charCode;
+					array.push(charCode);
+				}
+				return array;
+			})();
+			
+			function toBase64()
+			{
+				let base64Data = canvas.toDataURL();
+				let imgWindow = window.open();
+				imgWindow.document.write('<textarea id="data">' + base64Data + '</textarea><br>');
+				imgWindow.document.write('<input type="button" value="Copy to Clipboard" onclick="document.getElementById(\'data\').select(); document.execCommand(\'copy\')"></input>');
+			}
+			
+			function addMessage()
+			{
+				if (encoding)
+					return;
+				encoding = true;
+				
+				bitMessage = getBitMessage(document.getElementById("encode_message").value);
+					
+				let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				let alphaChannel;
+				for (var a = 0, messageCount = 0; a < imgData.data.length; a += 4, messageCount++) {
+					if (messageCount > bitMessage.length - 1)
+						messageCount = 0;
+					alphaChannel = imgData.data[a + 3].toString(2);
+					alphaChannel = alphaChannel.slice(0, alphaChannel.length - 1) + bitMessage[messageCount];
+					alphaChannel = Number("0b" + alphaChannel);
+					imgData.data[a + 3] = alphaChannel;
+				}
+				ctx.putImageData(imgData, 0, 0);
+				//console.log("done");
+				encoding = false;
+			}
+			
+			function getOrCheckImage() 
+			{
+				if (document.getElementById("encode_message").value === "")
+					alert("The message is: " + getMessage());
+				else
+					checkImage() ? alert("The image contains the message") : alert("The image does not contain the message");
+			}
+			
+			function getMessage()
+			{
+				let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				let alphaBits = "";
+				let alphaChannel = "";
+			
+				for (var a = 0; a < 4 * 96; a += 4) {
+					alphaChannel = imgData.data[a + 3].toString(2);
+					alphaBits += alphaChannel.slice(alphaChannel.length - 1);
+				}
+				
+				return decodeMessage(alphaBits);
+			}
+			
+			function checkImage() 
+			{
+				let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				let alphaBits = "";
+				let alphaChannel = "";
+				
+				let bitMessage = getBitMessage(document.getElementById("encode_message").value);
+				let reversedBitMessage = getBitMessage(document.getElementById("encode_message").value, true);
+				
+				for (var a = 0; a < imgData.data.length; a += 4) {
+					alphaChannel = imgData.data[a + 3].toString(2);
+					alphaBits += alphaChannel.slice(alphaChannel.length - 1);
+				}
+				
+				if (alphaBits.indexOf(bitMessage) !== -1 || alphaBots.indexOf(reversedBitMessage) !== -1)
+					return true;
+				else
+					return false;
+			}
+			
+			function getBitMessage(str, reversed = false) 
+			{
+				let message = str;
+				
+				if (message === "") {
+					alert("Please enter a message");
+					return;
+				}
+				if (message.length > 16) {
+					alert("Please limit the message to 16 characters");
+					return;
+				}
+				
+				let bitMessage = "";
+				let bitChar = "";
+				for (var a = 0; a < message.length; a++) {
+					bitChar = charArray[charTable.indexOf(message[a])];
+					bitMessage += !bitChar ? "000000" : bitChar;
+				}
+				while (bitMessage.length < 96)
+					bitMessage = "111111" + bitMessage;
+					
+				if (reversed) {
+					let reversedBitMessage = "";
+					for (var a = 0; a < bitMessage.length; a++)
+						reversedBitMessage += bitMessage[a] === "0" ? "1" : "0";
+					return reversedBitMessage;
+				}
+				return bitMessage;
+			}
+			
+			function decodeMessage(bitMessage) 
+			{
+				let message = "";
+				let newChar = "";
+				for (var a = 0; a < bitMessage.length; a += 6) {
+					newChar = charTable[charArray.indexOf(bitMessage.slice(a, a + 6))];
+					message += !newChar ? "\uFFFD" : newChar;
+				}
+				return message;
+			}
+			
+			function downloadPNG()
+			{
+				let base64Data = canvas.toDataURL();
+				let png_data = atob(base64Data.split(',')[1]);
+				let arrayBuffer = new ArrayBuffer(png_data.length);
+				let view = new Uint8Array(arrayBuffer);
+				for (var a in view)
+					view[a] = png_data.charCodeAt(a) & 0xff;
+				let blob = new Blob([arrayBuffer], {type: 'image/png'});
+				let url = window.URL.createObjectURL(blob);
+				let link = document.createElement('a');
+				link.href = url;
+				link.download = imgName;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			}
+			
+			input.addEventListener('change', function(e) 
+			{
+				image.src = window.URL.createObjectURL(input.files[0]);
+				imgName = input.files[0].name;
+				image.onload = function()
+				{
+					canvas.width = image.width;
+					canvas.height = image.height;
+					canvas.style.display = 'block';
+					ctx.drawImage(image, 0, 0);
+					ogCanvas.width = image.width;
+					ogCanvas.height = image.height;
+					ctx3.drawImage(image, 0, 0);
+				}
+				input.value = '';
+			});
+		</script>
+	</body>
+</html>

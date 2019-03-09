@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Base 64 Image Encoder</title>
+	</head>
+	<body>
+		<img id="image"></img>
+		
+		<div id="float">
+			<label id="upload_image_label" for="upload_image" class="button">Upload Image
+				<input id="upload_image" type="file" class="input"></input>
+			</label>
+			<span>|</span>
+			<label id="slider_label" for="slider" class="button">Transparent
+				<!--<input id="make_transparent" type="button" class="input" onclick="makeTransparent(mouse.selectedPixel)"></input>-->
+				<br><input id="slider" type="range" min="0" max="255" value="255" class="slider"></input>
+			</label>
+			<span>|</span>
+			<label id="to_base64_label" for="to_base64" class="button">To Base64
+				<input id="to_base64" type="button" class="input" onclick="toBase64()"></input>
+			</label>
+			<span>|</span>
+			<label id="download_png_label" for="download_png" class="button">Download PNG
+				<input id="download_png" type="button" class="input" onclick="downloadPNG()"></input>
+			</label>
+			<br>
+			<p>Selected Color: <canvas id="colorCanvas" width="0px" height="0px"></canvas></p>
+		</div>
+		<canvas id="canvas" width="0px" height="0px"></canvas>
+		
+		<style>
+			.button
+			{
+				display: inline-block;
+				border: 2px solid black;
+				padding: 1px 10px 1px 10px;
+				font-weight: bold;
+				vertical-align: top;
+				background: white;
+				-webkit-transition: .2s;
+				transition: background .2s;
+			}
+			
+			.button:hover
+			{
+				background: #f2f2f2;
+			}
+			
+			.slider 
+			{
+				-webkit-appearance: none;
+				appearance: none;
+				width: 82px;
+				height: 10px;
+				background: #d3d3d3;
+				outline: none;
+				opacity: 0.7;
+				-webkit-transition: .2s;
+				transition: opacity .2s;
+			}
+			
+			.slider:hover
+			{
+				opacity: 1;
+			}
+
+			.slider::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				appearance: none;
+				width: 10px;
+				height: 10px;
+				background: black;
+				cursor: pointer;
+			}
+			
+			p
+			{
+				padding: 1px 10px 1px 10px;
+				font-weight: bold;
+			}
+			
+			canvas
+			{
+				border: 1.5px dotted black;
+				display: none;
+			}
+			
+			#colorCanvas
+			{
+				position: relative;
+				top: 1.5px;
+			}
+			
+			.input, #image
+			{
+				display: none;
+			}
+		</style>
+		
+		<script>
+			var input = document.getElementById('upload_image');
+			var canvas = document.getElementById('canvas');
+			var colorCanvas = document.getElementById('colorCanvas');
+			var ogCanvas = document.createElement('canvas');
+			var ctx = canvas.getContext('2d');
+			var ctx2 = colorCanvas.getContext('2d');
+			var ctx3 = ogCanvas.getContext('2d');
+			var image = document.getElementById('image');
+			var imgName;
+			var mouse = {raw_x: 0, raw_y: 0, outside_x: 0, outside_y: 0, click_x: 0, click_y: 0, selectedPixel: undefined};
+			var imgData;
+			var alphaCoef = 1;
+			ctx.imageSmoothingEnabled = false;
+			
+			function getMousePos(canvas, e)
+			{
+				let rect = canvas.getBoundingClientRect();
+				return {x: e.clientX - rect.left, y: e.clientY - rect.top};
+			}
+			
+			function fillColorCanvas(pixel)
+			{
+				if(pixel) {
+					colorCanvas.style.display = 'inline';
+					colorCanvas.width = '10';
+					colorCanvas.height = '10';
+					ctx2.fillStyle = 'rgba(' + pixel.join(', ') + ')';
+					ctx2.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
+				} else {
+					colorCanvas.style.display = 'none';
+				}
+			}
+			
+			document.getElementById('slider').oninput = function()
+			{
+				imgData = ctx3.getImageData(0, 0, canvas.width, canvas.height);
+				let imgData2 = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				if(mouse.selectedPixel) {
+					let pixel = mouse.selectedPixel;
+					let alpha = Number(this.value);
+					for(var a = 0; a < imgData.data.length; a += 4) {
+						if(imgData.data[a] === pixel[0] && imgData.data[a + 1] === pixel[1] && imgData.data[a + 2] === pixel[2] && imgData.data[a + 3] === pixel[3]) {
+							imgData2.data[a] = imgData.data[a];
+							imgData2.data[a + 1] = imgData.data[a + 1];
+							imgData2.data[a + 2] = imgData.data[a + 2];
+							imgData2.data[a + 3] = alpha * alphaCoef;
+						}
+					}
+					ctx.putImageData(imgData2, 0, 0);
+				} else {
+					//let alpha = Number(this.value);
+					alphaCoef = Number(this.value) / 255;
+					for(var a = 0; a < imgData.data.length; a += 4) {
+						imgData2.data[a] = imgData.data[a];
+						imgData2.data[a + 1] = imgData.data[a + 1];
+						imgData2.data[a + 2] = imgData.data[a + 2];
+						imgData2.data[a + 3] = imgData.data[a + 3] * alphaCoef;
+					}
+					ctx.putImageData(imgData2, 0, 0);
+				}
+			}
+			
+			function toBase64()
+			{
+				let base64Data = canvas.toDataURL();
+				let imgWindow = window.open();
+				imgWindow.document.write('<textarea id="data">' + base64Data + '</textarea><br>');
+				imgWindow.document.write('<input type="button" value="Copy to Clipboard" onclick="document.getElementById(\'data\').select(); document.execCommand(\'copy\')"></input>');
+			}
+			
+			function downloadPNG()
+			{
+				let base64Data = canvas.toDataURL();
+				let png_data = atob(base64Data.split(',')[1]);
+				let arrayBuffer = new ArrayBuffer(png_data.length);
+				let view = new Uint8Array(arrayBuffer);
+				for(var a in view)
+					view[a] = png_data.charCodeAt(a) & 0xff;
+				let blob = new Blob([arrayBuffer], {type: 'image/png'});
+				let url = window.URL.createObjectURL(blob);
+				let link = document.createElement('a');
+				link.href = url;
+				link.download = imgName;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			}
+			
+			input.addEventListener('change', function(e) 
+			{
+				image.src = window.URL.createObjectURL(input.files[0]);
+				imgName = input.files[0].name;
+				image.onload = function()
+				{
+					canvas.width = image.width;
+					canvas.height = image.height;
+					canvas.style.display = 'block';
+					ctx.drawImage(image, 0, 0);
+					ogCanvas.width = image.width;
+					ogCanvas.height = image.height;
+					ctx3.drawImage(image, 0, 0);
+				}
+				input.value = '';
+			});
+			
+			canvas.addEventListener('mousemove', function(e)
+			{
+				let mousePos = getMousePos(canvas, e);
+				mouse.raw_x = mousePos.x;
+				mouse.raw_y = mousePos.y;
+				mouse.outside_x = e.clientX;
+				mouse.outside_y = e.clientY;
+			}, false);
+			
+			canvas.addEventListener('click', function(e)
+			{
+				mouse.click_x = mouse.raw_x;
+				mouse.click_y = mouse.raw_y;
+				mouse.selectedPixel = ctx3.getImageData(mouse.raw_x, mouse.raw_y, 1, 1).data;
+				mouse.dummyPixel = ctx.getImageData(mouse.raw_x, mouse.raw_y, 1, 1).data;
+				document.getElementById('slider').value = mouse.dummyPixel[3];
+				fillColorCanvas(mouse.selectedPixel);
+			}, false);
+			
+			document.addEventListener('click', function(e) {
+				let rect = canvas.getBoundingClientRect();
+				let contains = document.body.contains(e.target) && document.body !== e.target;
+				if (!contains) {
+					mouse.click_x = undefined;
+					mouse.click_y = undefined;
+					mouse.selectedPixel = undefined;
+					mouse.dummyPixel = undefined;
+					document.getElementById('slider').value = alphaCoef * 255;
+					fillColorCanvas(mouse.selectedPixel);
+				}
+			}, false);
+		</script>
+	</body>
+</html>
