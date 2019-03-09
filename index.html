@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Huffman Coding</title>
+		<script src="HuffmanCoding.js"></script>
+	</head>
+	<body>
+		<input id="upload" type="file"></input>
+		<br>
+		<textarea></textarea>
+		<br>
+		<input id="downloadBin" type="button" value="Download .bin"></input>
+		<input id="downloadTxt" type="button" value="Download .txt"></input>
+		
+		<style>
+			textarea {
+				margin-top: 5px;
+				width: 600px;
+				height: 500px;
+			}
+		</style>
+		
+		<script>
+			var upload = document.getElementById("upload");
+			var textarea = document.getElementsByTagName("textarea")[0];
+			var downloadBin = document.getElementById("downloadBin");
+			
+			var bitArray;
+			var dcMsg;
+			var fileName;
+			
+			upload.addEventListener("change", function(e) {
+				var file = e.target.files[0];
+				fileName = file.name.slice(0, file.name.indexOf("."));
+				var fileReader = new FileReader();
+				var extension = file.name.match(/\.[0-9a-z]+$/i);
+				
+				fileReader.onload = function(e) {
+					if (extension[0] === ".txt") {
+						textarea.value = fileReader.result;
+					} else {
+						var arrayBuffer = fileReader.result;
+						var dataView = new DataView(fileReader.result);
+						bitArray = new BitArray(dataView);
+						dcMsg = decompressFromBitArray(bitArray);
+						textarea.value = dcMsg;
+					}
+				};
+				
+				if (extension[0] === ".txt")
+					fileReader.readAsText(file);
+				else
+					fileReader.readAsArrayBuffer(file);
+			});
+			
+			downloadBin.onclick = function() {
+				downloadBitArray(compressToBitArray(textarea.value), fileName + ".bin");
+			}
+			
+			downloadTxt.onclick = function() {
+				let blob = new Blob([textarea.value], {type: "text/plain"});
+				let url = window.URL.createObjectURL(blob);
+				let a = document.createElement("a");
+				a.href = url;
+				a.download = fileName + ".txt";
+				a.click();
+				window.URL.revokeObjectURL(url);
+			}
+		</script>
+	</body>
+</html>
