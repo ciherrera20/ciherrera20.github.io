@@ -67,6 +67,10 @@ function getTree(message) {
 		insertNode(characters[key]);
 	});
 	
+	if (tree.length === 1) {
+		tree[0].newRep = "0";
+	}
+	
 	while (tree.length > 1) {
 		joinLast();
 	}
@@ -129,7 +133,16 @@ function encodeTree(tree) {
 		});
 		string += getCharString("}");
 	}
-	traverseTree(tree);
+	
+	if (tree.children.length !== 0) {
+		traverseTree(tree);
+	} else {
+		string += getCharString("{");
+		if (tree.char[1] === "\\")
+			string += getCharString("\\");
+		string += getCharString(tree.char) + getCharString("}");
+	}
+	
 	return string;
 }
 
@@ -137,7 +150,9 @@ function decompressWithTree(tree, message) {
 	let currentNode = tree;
 	let newMessage = "";
 	for (var i = 0; i < message.length; i++) {
-		currentNode = currentNode.children[message[i]];
+		if (tree.children.length !== 0)
+			currentNode = currentNode.children[message[i]];
+		
 		if (currentNode.leaf) {
 			newMessage += currentNode.char;
 			currentNode = tree;
@@ -237,7 +252,14 @@ function decodeTree(rawCharData) {
 			parent.children.push(childNode);
 		});
 	}
-	parseNode(string, tree);
+	
+	if (string.length > 3) {
+		parseNode(string, tree);
+	} else {
+		tree.newRep = "0";
+		tree.leaf = true;
+		tree.char = string[1];
+	}
 	
 	return tree;
 }
@@ -312,7 +334,7 @@ function BitArray(length) {
 			uint8Array[i] = length.getUint8(i);
 		}
 	} else {
-		paddedLength = length + length % 8;
+		paddedLength = length + (8 - length % 8);
 		bitLength = length;
 		uint8Array = new Uint8Array(paddedLength / 8);
 	}
