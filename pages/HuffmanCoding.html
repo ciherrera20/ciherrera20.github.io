@@ -36,7 +36,7 @@
 				var extension = file.name.match(/\.[0-9a-z]+$/i);
 				
 				fileReader.onload = function(e) {
-					if (extension[0] === ".txt") {
+					if (extension[0] !== ".bin") {
 						textarea.value = fileReader.result;
 					} else {
 						var arrayBuffer = fileReader.result;
@@ -47,7 +47,7 @@
 					}
 				};
 				
-				if (extension[0] === ".txt")
+				if (extension[0] !== ".bin")
 					fileReader.readAsText(file);
 				else
 					fileReader.readAsArrayBuffer(file);

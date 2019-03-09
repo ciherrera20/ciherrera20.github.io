@@ -1206,22 +1206,35 @@
 			/************************************************************************Testing************************************************************************/
 			
 			var loadSave = document.getElementById("loadSave");
-			var bitArray;
-			var dcMsg;
 			
 			loadSave.addEventListener("change", function(e) {
 				var file = e.target.files[0];
 				var fileReader = new FileReader();
+				var extension = file.name.match(/\.[0-9a-z]+$/i);
 				
 				fileReader.onload = function(e) {
-					var arrayBuffer = fileReader.result;
-					var dataView = new DataView(fileReader.result);
-					bitArray = new BitArray(dataView);
-					dcMsg = decompressFromBitArray(bitArray);
+					if (extension[0] === ".json") {
+						load(fileReader.result);
+					} else {
+						var arrayBuffer = fileReader.result;
+						var dataView = new DataView(fileReader.result);
+						var bitArray = new BitArray(dataView);
+						var dcMsg = decompressFromBitArray(bitArray);
+						load(dcMsg);
+					}
 				};
 				
-				fileReader.readAsArrayBuffer(file);
+				if (extension[0] === ".json")
+					fileReader.readAsText(file);
+				else
+					fileReader.readAsArrayBuffer(file);
 			});
+			
+			var d;
+			
+			function load(json) {
+				d = JSON.parse(json);
+			}
 		</script>
 	</body>
 </html>
