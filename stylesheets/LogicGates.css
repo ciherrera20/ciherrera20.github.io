@@ -232,8 +232,16 @@ body {
 	cursor: pointer;
 }
 
+#nandName {
+	cursor: default;
+}
+
 .compName:hover {
 	text-decoration: underline;
+}
+
+#nandName:hover {
+	text-decoration: none;
 }
 
 .componentTab > .rowFlex > div {

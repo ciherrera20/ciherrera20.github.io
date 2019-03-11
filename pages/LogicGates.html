@@ -3,6 +3,7 @@
 	<head>
 		<title>Logic Gates</title>
 		<link rel="stylesheet" type="text/css" href="../stylesheets/LogicGates.css">
+		<script src="../scripts/draggable.js"></script>
 		<script src="../scripts/LogicGates.js"></script>
 		<script src="../scripts/sweetalert.min.js"></script>
 		<script src="../scripts/Definitions.js"></script>
@@ -192,14 +193,18 @@
 				workspaceWrapper.appendChild(columnFlex);
 				document.body.appendChild(workspaceWrapper);
 				
-				function addOutputToOutputSpace(output) {
+				function addOutputToOutputSpace() {
+					var output = createOutput();
 					workspace.outputSpace.insertBefore(output, workspace.outputSpace.add);
-					outputs++;
+					outputs.push(output);
+					return output;
 				}
 				
-				function addInputToInputSpace(input) {
+				function addInputToInputSpace() {
+					var input = createInput();
 					workspace.inputSpace.insertBefore(input, workspace.inputSpace.add);
-					inputs++;
+					inputs.push(input);
+					return input;
 				}
 				
 				workspace.wrapper = workspaceWrapper;
@@ -223,19 +228,17 @@
 					workspaceName.innerHTML = name;
 				}
 				
-				addOutput.onclick = function() {
-					addOutputToOutputSpace(createOutput());
-				}
+				workspace.addInput = addInputToInputSpace;
+				workspace.addOutput = addOutputToOutputSpace;
 				
-				addInput.onclick = function() {
-					addInputToInputSpace(createInput());
-				}
+				addOutput.onclick = addOutputToOutputSpace;
+				addInput.onclick = addInputToInputSpace;
 				
 				workspaces.push(workspace);
 				
 				var components = [];
-				var inputs = 0;
-				var outputs = 0;
+				var inputs = [];
+				var outputs = [];
 				
 				workspace.addComponent = function(component) {
 					components.push(component);
@@ -253,7 +256,6 @@
 				
 				workspace.updateComponentCostumes = function() {
 					components.forEach(function(component) {
-						//console.log("Hi");
 						component.updateCostume();
 					});
 				}
@@ -323,11 +325,9 @@
 				}
 				
 				input.removeConnection = function(connection) {
-					console.log(connection.path);
 					connection.path.updateBottom(connection.getPosition());
 					connections.splice(connections.indexOf(connection), 1);
 					connection.setInputNode(null);
-					//console.log(connection);
 					if (connection.customOutput)
 						workspace.internalComponent.connectInputTo(workspace.internalComponent.outputBuffer[connection.outputIndex], null);
 					else
@@ -335,9 +335,13 @@
 				}
 				
 				input.removeAllConnections = function() {
-					connections.forEach(function(connection) {
-						node.removeConnection(connection);
-					});
+					while (connections.length > 0) {
+						let connection = connections[0]
+						input.removeConnection(connection);
+						connection.updateCostume(false);
+						updateTop(connection.internalComponent);
+					}
+					workspace.updateComponentCostumes();
 				}
 					
 				node.addEventListener("mouseenter", function() {
@@ -365,6 +369,7 @@
 				Object.defineProperty(input, "internalComponent", {get() {return internalComponent}});
 				Object.defineProperty(input, "inputIndex", {get() {return inputIndex}});
 				Object.defineProperty(input, "customInput", {get() {return true}});
+				Object.defineProperty(input, "outputs", {get(){return [input]}});
 				
 				return input;
 			}
@@ -446,6 +451,17 @@
 				workspace.internalComponent.addNewOutput();
 				let internalComponent = workspace.internalComponent.outputBuffer.last;
 				let outputIndex = workspace.internalComponent.outputBuffer.length - 1;
+				
+				output.connectInputTo = function(comp, outputIndex, inputIndex) {
+					let input = output;
+					let outputNode = comp.outputs[outputIndex];
+					
+					input.path.updateTop(input.getPosition());
+					input.path.updateBottom(outputNode.getPosition());
+					outputNode.addConnection(input);
+					updateTop(outputNode.internalComponent);
+					workspaces.current.updateComponentCostumes();
+				}
 				
 				Object.defineProperty(output, "internalComponent", {get() {return internalComponent}});
 				Object.defineProperty(output, "outputIndex", {get() {return outputIndex}});
@@ -656,7 +672,6 @@
 					}
 					
 					node.removeConnection = function(connection) {
-						console.log(connection);
 						connection.path.updateBottom(connection.getPosition());
 						connections.splice(connections.indexOf(connection), 1);
 						connection.setInputNode(null);
@@ -665,9 +680,13 @@
 					}
 					
 					node.removeAllConnections = function() {
-						connections.forEach(function(connection) {
+						while (connections.length > 0) {
+							let connection = connections[0]
 							node.removeConnection(connection);
-						});
+							connection.updateCostume(false);
+							updateTop(connection.internalComponent);
+						}
+						workspace.updateComponentCostumes();
 					}
 					
 					node.addEventListener("mouseenter", function() {
@@ -719,7 +738,6 @@
 							inputNode.removeConnection(triangle);
 						}
 						triangle.updateCostume(false);
-						//workspace.updateInternalElements();
 						updateTop(triangle.internalComponent);
 						workspace.updateComponentCostumes();
 					});
@@ -797,6 +815,7 @@
 						connection.path.parentNode.removeChild(connection.path);
 						connection = null;
 					});
+					
 					outs.forEach(function(out) {
 						out.removeAllConnections();
 					});
@@ -808,9 +827,47 @@
 					updatePaths();
 				}
 				
+				componentBlock.updatePos = function(x, y) {
+					componentBlock.style.left = x + "px";
+					componentBlock.style.top = y + "px";
+					
+					componentBlock.updatePaths();
+				}
+				
 				// Makes the block draggable once it has been added to the DOM
 				function callback(mutationsList) {
-					draggable(componentBlock, true, componentBlock.offsetWidth + 2, spanSandwich.offsetHeight - 4);
+					//draggable(componentBlock, true, componentBlock.offsetWidth + 2, spanSandwich.offsetHeight - 4);
+					function onMousedown() {
+						componentBlock.style.pointerEvents = "none";
+					}
+					function onMouseup(x, y) {
+						let parent = componentBlock.parentNode;
+						let width = componentBlock.offsetWidth + 2;
+						let height = spanSandwich.offsetHeight - 4;
+							
+						if (overTrash) {
+							componentBlock.workspace.removeComponent(componentBlock);
+							return;
+						}
+							
+						componentBlock.style.pointerEvents = "all";
+						
+						if (x < 0)
+							x = 0;
+						
+						if (y < height)
+							y = height;
+						
+						if (x > parent.offsetWidth - width)
+							x = parent.offsetWidth - width;
+						
+						if (y > parent.offsetHeight)
+							y = parent.offsetHeight;
+						
+						componentBlock.updatePos(x, y);
+							
+					}
+					draggable(componentBlock, componentBlock.updatePos, onMousedown, onMouseup);
 					observer.disconnect();
 				};
 				
@@ -833,12 +890,22 @@
 				
 				componentBlock.updateCostume = updateCostume;
 				
-				//console.log(internalComponent.outputs, internalComponent.lastOutputs);
+				componentBlock.connectInputTo = function(comp, outputIndex, inputIndex) {
+					let input = connections[inputIndex];
+					let outputNode = comp.outputs[outputIndex];
+					
+					input.path.updateBottom(outputNode.getPosition());
+					outputNode.addConnection(input);
+					updateTop(outputNode.internalComponent);
+					workspaces.current.updateComponentCostumes();
+				}
+				
 				internalComponent.outputs;
 				updateCostume();
-				//workspace.updateComponentCostumes();
 				
 				Object.defineProperty(componentBlock, "internalComponent", {get(){return internalComponent}});
+				Object.defineProperty(componentBlock, "outputs", {get(){return outs}});
+				Object.defineProperty(componentBlock, "inputs", {get(){return connections}});
 				
 				return componentBlock;
 			}
@@ -849,7 +916,7 @@
 			document.getElementsByClassName("trash")[0].addEventListener("mouseleave", function(){overTrash = false; this.className = "trash";}, true);
 			
 			// Makes a div draggable
-			function draggable(div, confineToParent = true, width, height) {
+			/*function draggable(div, confineToParent = true, width, height) {
 				var mousePosition;
 				var offset = [0, 0];
 				var isDown = false; // Flag for the mousemove callback to start dragging
@@ -926,21 +993,6 @@
 						
 						//console.log(trueX, trueY, height);
 						
-						// Prevents div from going outside the bounds of its parent element
-						/*if (confineToParent) {
-							if (trueX < 0)
-								trueX = 0;
-								
-							if (trueY < height)
-								trueY = height;
-								
-							if (trueX > parent.offsetWidth - width)
-								trueX = parent.offsetWidth - width;
-								
-							if (trueY > parent.offsetHeight)
-								trueY = parent.offsetHeight;
-						}*/
-						
 						// Sets the div's new position
 						div.style.left = (trueX) + "px";
 						div.style.top = (trueY) + "px";
@@ -955,7 +1007,7 @@
 				div.addEventListener("mousedown", mousedown); // Detects clicks on div
 				document.addEventListener("mouseup", mouseup); // Added to document in case mouse is separated from the div
 				document.addEventListener("mousemove", mousemove); // Detects mouse movement on the entire document
-			}
+			}*/
 		
 			var backpack = document.getElementById("backpack");
 			backpack.tabs = []; // Keeps track of tabs that have been added
@@ -989,9 +1041,9 @@
 			
 			// Checks if a name is already taken by another component
 			function nameInUse(name) {
-				return Boolean(backpack.tabs.filter(function(tab) {
+				return backpack.tabs.find(function(tab) {
 					return tab.name === name;
-				}).length);
+				}) !== undefined;
 			}
 			
 			// Creates and returns an add button
@@ -1056,6 +1108,8 @@
 				rowFlex.className = "rowFlex";
 				buttonDiv.className = "rowFlex";
 				compName.className = "compName";
+				if (nand)
+					compName.id = "nandName";
 				compName.innerHTML = name;
 				if (nand)
 					buttonDiv.setAttribute("id", "nandButtonDiv");
@@ -1075,7 +1129,7 @@
 				componentTab.add = add;
 				componentTab.del = del;
 				componentTab.rename = rename;
-				componentTab.name = name;
+				Object.defineProperty(componentTab, "name", {get(){return name}});
 				
 				// Renames the component tab
 				function renameComponent() {
@@ -1085,7 +1139,6 @@
 					.then(function(newName) {
 						if (!nameInUse(newName)) {
 							compName.innerHTML = newName;
-							componentTab.name = newName;
 							name = newName;
 							componentTab.workspace.rename(newName);
 							renameInstances(newName);
@@ -1130,29 +1183,31 @@
 				
 				var componentInstances = [];
 				
+				componentTab.addComponentToWorkspace = addComponentToWorkspace;
 				function addComponentToWorkspace() {
 					if (componentTab.workspace === workspaces.current)
 						return;
 					
+					var component;
 					if (componentTab === nandTab) {
-						var component = createComponentBlock("nand", 2, 1, workspaces.current, componentTab.workspace);
+						component = createComponentBlock("nand", 2, 1, workspaces.current, componentTab.workspace);
 						componentInstances.push(component);
 						workspaces.current.addComponent(component);
 					} else {
-						var component = createComponentBlock(name, componentTab.workspace.inputs, componentTab.workspace.outputs, workspaces.current, componentTab.workspace);
+						component = createComponentBlock(name, componentTab.workspace.inputs.length, componentTab.workspace.outputs.length, workspaces.current, componentTab.workspace);
 						componentInstances.push(component);
 						workspaces.current.addComponent(component);
 					}
+					return component;
 				}
 				
 				componentTab.deleteInstances = deleteInstances;
 				
-				
-				
 				// Sets onclick listeners
 				rename.onclick = renameComponent;
 				del.onclick = deleteComponentTab;
-				compName.onclick = selectComponent;
+				if (!nand)
+					compName.onclick = selectComponent;
 				add.onclick = addComponentToWorkspace;
 				
 				backpack.tabs.push(componentTab);
@@ -1189,9 +1244,10 @@
 			function deleteComponent(componentTab) {
 				componentTab.deleteInstances();
 				componentTab.parentNode.removeChild(componentTab);
-				backpack.tabs = backpack.tabs.filter(function(tab) {
+				backpack.tabs.splice(backpack.tabs.indexOf(componentTab), 1);
+				/*backpack.tabs = backpack.tabs.filter(function(tab) {
 					return tab !== componentTab;
-				});
+				});*/
 				
 				if (workspaces.current === componentTab.workspace)
 					workspaces.select(workspaces.indexOf(componentTab.workspace) - 1);
@@ -1234,6 +1290,68 @@
 			
 			function load(json) {
 				d = JSON.parse(json);
+				
+				backpack.tabs.forEach(function(tab) {
+					if (tab.name !== "nand")
+						deleteComponent(tab);
+				});
+				
+				// Creating component tabs
+				d.forEach(function(component, i) {
+					initComponent(component.name);
+					var currTab = backpack.tabs[1 + i];
+					
+					var inputs = [], outputs = [];
+					
+					// Add inputs and outputs
+					for (var j = 0; j < component.inputs; j++) {
+						inputs.push(currTab.workspace.addInput());
+					}
+					for (var j = 0; j < component.outputs.length; j++) {
+						outputs.push(currTab.workspace.addOutput());
+					}
+					
+					var componentBlocks = {};
+					var components = [];
+					
+					// Add component blocks
+					component.componentBlocks.forEach(function(block) {
+						if (componentBlocks[block.name] === undefined)
+							componentBlocks[block.name] = [];
+						
+						var blockTab = backpack.tabs.find(function(tab) {
+							return tab.name === block.name;
+						});
+						
+						var compBlock = blockTab.addComponentToWorkspace();
+						compBlock.updatePos(block.x, block.y);
+						componentBlocks[block.name].push(compBlock);
+						components.push(compBlock);
+					});
+					
+					// Adding connections between component blocks
+					components.forEach(function(block, i) {
+						let blockData = component.componentBlocks[i];
+						
+						blockData.inputs.forEach(function(input, j) {
+							if (input.input == true) {
+								block.connectInputTo(inputs[input.compIndex], 0, j);
+							} else {
+								if (input.inputName === null)
+									return;
+								block.connectInputTo(componentBlocks[input.inputName][input.compIndex], input.outputIndex, j);
+							}
+						});
+					});
+					
+					component.outputs.forEach(function(output, i) {
+						if (output.inputName === null)
+							return;
+						
+						let outputBlock = outputs[i]
+						outputBlock.connectInputTo(componentBlocks[output.inputName][output.compIndex], output.outputIndex, i);
+					});
+				});
 			}
 		</script>
 	</body>
