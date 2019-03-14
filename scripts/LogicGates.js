@@ -82,7 +82,7 @@ function populate(array, object = empty(), value = null) {
 			};
 			
 			that.removeOutput = function(comp, outputIndex) {
-				console.log(outputComps[outputIndex]);
+				//console.log(outputComps[outputIndex]);
 				outputComps[outputIndex].remove(comp);
 			};
 		
@@ -409,7 +409,7 @@ function populate(array, object = empty(), value = null) {
 				let compInst = new f[name]();
 				let that = compInst;
 				
-				let inputs = [];
+				let inputs = generateConnections(numInputs);
 				let outputComps = generateOutputComps(numOutputs);
 				let lastOutputs = inputs.map(function(input){return false});
 				let instOutputBuffer = [];
@@ -500,7 +500,7 @@ function populate(array, object = empty(), value = null) {
 				}
 				
 				that.update = function() {
-					inputs = [];
+					inputs = generateConnections(numInputs);
 					outputComps = generateOutputComps(numOutputs);
 					lastOutputs = inputs.map(function(input){return false});
 					instOutputBuffer = [];
@@ -681,7 +681,7 @@ function updateTop(comp) {
 	clearVisits(comp);
 	
 	topComponents.forEach(function(comp) {
-		console.log("Evaluating top components, component is a " + comp.name);
+		//console.log("Evaluating top components, component is a " + comp.name);
 		comp.outputs;
 	});
 }

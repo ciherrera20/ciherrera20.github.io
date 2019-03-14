@@ -6,11 +6,11 @@
 		<script src="../scripts/draggable.js"></script>
 		<script src="../scripts/LogicGates.js"></script>
 		<script src="../scripts/sweetalert.min.js"></script>
-		<script src="../scripts/Definitions.js"></script>
+		<!-- <script src="../scripts/Definitions.js"></script> -->
 		<script src="../scripts/HuffmanCoding.js"></script>
 	</head>
 	<body>
-		<div id="backpackWrapper" class="columnFlex">
+		<div id="backpackWrapper" class="columnFlex">   
 			<span class="rowFlex">
 				<h2>Components</h2>
 			</span>
@@ -23,7 +23,7 @@
 					<input id="loadSave" class="inputs" type="file"></input>
 				</label>
 				<label class="button">Save
-					<input class="inputs" type="button"></input>
+					<input id="save" class="inputs" type="button"></input>
 				</label>
 				<div class="settings"></div>
 			</div>
@@ -115,6 +115,70 @@
 		<!-- </div> -->
 		
 		<script>
+			var currentSave = Object.create(null);
+			currentSave.data = [];
+			currentSave.saveInLocalStorage = function() {
+				localStorage.setItem("save", JSON.stringify(currentSave.data));
+			}
+			
+			window.onunload = currentSave.saveInLocalStorage;
+			
+			/*currentSave.addTab = function(tab) {
+				this.tabs.push(tab);
+				
+				let tabData = Object.create(null);
+				tabData.name = tab.name;
+				tabData.outputs = [];
+				tabData.componentBlocks = [];
+				tabData.inputs = 0;
+				
+				this.data.push(tabData);
+			}
+			currentSave.renameTab = function(tab, newName) {
+				this.data.forEach(function(component) {
+					if (component.name === tab.name)
+						component.name = newName;
+						
+					component.outputs.forEach(function(output) {
+						if (output.name === tab.name)
+							output.name = newName;
+					});
+					
+					component.componentBlocks.forEach(function(block) {
+						if (block.name === tab.name)
+							block.name = newName;
+					});
+				});
+			}
+			currentSave.removeTab = function(tab) {
+				let i = this.tabs.indexOf(tab);
+				this.tabs.splice(i, 1);
+				this.data.splice(i, 1);
+			}
+			currentSave.addOutputToTab = function(tab) {
+				let i = this.tabs.indexOf(tab);
+				
+				let outputData = Object.create(null);
+				outputData.name = null;
+			}
+			currentSave.addBlock = function(tab, block) {
+				let i = this.tabs.indexOf(tab);
+				
+				let blockData = Object.create(null);
+				let pos = block.getPosition();
+				blockData.name = block.name;
+				blockData.x = pos.x;
+				blockData.y = pos.y;
+				blockData.outputs = [];
+				blockData.componentBlock = [];
+				blockData.inputs = 0;
+			}
+			currentSave.addInputToTab = function(tab) {
+				let i = this.tabs.indexOf(tab);
+				
+				this.data[i].inputs++;
+			}*/
+			
 			var workspaces = [];
 			
 			workspaces.select = function(selection) {
@@ -197,6 +261,9 @@
 					var output = createOutput();
 					workspace.outputSpace.insertBefore(output, workspace.outputSpace.add);
 					outputs.push(output);
+					workspace.componentTab.addOutputToInstances();
+					workspace.componentTab.saveData.outputs.push(output.saveData);
+					//console.log(workspace.componentTab.saveData.outputs);
 					return output;
 				}
 				
@@ -204,6 +271,8 @@
 					var input = createInput();
 					workspace.inputSpace.insertBefore(input, workspace.inputSpace.add);
 					inputs.push(input);
+					workspace.componentTab.addInputToInstances();
+					workspace.componentTab.saveData.inputs++;
 					return input;
 				}
 				
@@ -243,15 +312,37 @@
 				workspace.addComponent = function(component) {
 					components.push(component);
 					workspace.appendChild(component);
+					workspace.componentTab.saveData.componentBlocks.push(component.saveData);
+					//console.log(component);
 				}
 				
 				workspace.removeComponent = function(component) {
+					let i = components.indexOf(component);
+					components.forEach(function(comp) {
+						comp.saveData.inputs.forEach(function(input) {
+							if (typeof input.compIndex !== "number")
+								return;
+							if (input.compIndex > i)
+								input.compIndex--;
+						});
+					});
+					workspace.componentTab.saveData.componentBlocks.splice(i, 1);
+					outputs.forEach(function(output) {
+						if (typeof output.saveData.compIndex !== "number")
+							return;
+						if (output.saveData.compIndex > i)
+							output.saveData.compIndex--;
+					});
 					component.deleteConnections();
 					purge(component);
-					components.splice(components.indexOf(component), 1);
+					components.splice(i, 1);
 					document.removeEventListener("mouseup", component.mouseup);
 					document.removeEventListener("mousemove", component.mousemove);
 					workspace.removeChild(component);
+				}
+				
+				workspace.componentIndex = function(component) {
+					return components.indexOf(component);
 				}
 				
 				workspace.updateComponentCostumes = function() {
@@ -299,6 +390,7 @@
 					else
 						node.circle.setAttribute("stroke", "black");
 					internalComponent.setState(that.checked);
+					input.updateCostume();
 					workspace.updateComponentCostumes();
 				});
 				
@@ -359,7 +451,7 @@
 					});
 				}
 				
-				workspace.addComponent(input);
+				//workspace.addComponent(input);
 				
 				workspace.internalComponent.addNewInput();
 				let internalComponent = toggleable.getInstance();
@@ -428,9 +520,22 @@
 					inputNode = node;
 					if (node === null) {
 						workspace.internalComponent.connectOutputTo(null, 0, outputIndex);
+						saveData.name = null;
+						saveData.compIndex = null;
+						saveData.input = false;
+						saveData.outputIndex = null;
 					} else {
 						if (!node.customInput) {
 							workspace.internalComponent.connectOutputTo(node.internalComponent, node.outputIndex, outputIndex);
+							saveData.name = node.componentBlock.name;
+							saveData.compIndex = workspace.componentIndex(node.componentBlock);
+							saveData.input = false;
+							saveData.outputIndex = node.outputIndex;
+						} else {
+							saveData.name = null;
+							saveData.compIndex = node.inputIndex;
+							saveData.input = true;
+							saveData.outputIndex = null;
 						}
 					}
 				}
@@ -466,7 +571,15 @@
 				Object.defineProperty(output, "internalComponent", {get() {return internalComponent}});
 				Object.defineProperty(output, "outputIndex", {get() {return outputIndex}});
 				Object.defineProperty(output, "customOutput", {get() {return true}});
-				
+			
+				/*********************************** Save Data ***********************************/
+				var saveData = Object.create(null);
+				saveData.name = null;
+				saveData.compIndex = null;
+				saveData.input = false;
+				saveData.outputIndex = null;
+				output.saveData = saveData;
+			
 				return output;
 			}
 		
@@ -646,11 +759,19 @@
 				inputTrianglesWrapper.className = "inputTriangles";
 				inputTriangles.className = "rowFlex";
 				
+				/*********************************** Save Data ***********************************/
+				var saveData = Object.create(null);
+				saveData.name = name;
+				saveData.x = 0;
+				saveData.y = 60;
+				saveData.inputs = [];
+				componentBlock.saveData = saveData;
+				/************************************** End **************************************/
+				
 				var outs = [];
 				var connections = [];
 				
-				// Creates and adds svg circles to output nodes
-				for (var i = 0; i < outputs; i++) {
+				function addOutput(i) {
 					let outputIndex = i;
 					let node = createSVGCircle();
 					let connections = [];
@@ -713,14 +834,14 @@
 					Object.defineProperty(node, "internalComponent", {get() {return internalComponent}});
 					Object.defineProperty(node, "outputIndex", {get() {return outputIndex}});
 					Object.defineProperty(node, "customInput", {get() {return false}});
+					Object.defineProperty(node, "componentBlock", {get() {return componentBlock}});
 					
 					outs.push(node);
 					
 					outputNodes.appendChild(node);
 				}
 				
-				// Creates and adds svg circles and triangles to input nodes and input triangles
-				for (var i = 0; i < inputs; i++) {
+				function addInput(i) {
 					let inputIndex = i;
 					let node = createSVGCircle();
 					let triangle = createSVGTriangle();
@@ -753,6 +874,25 @@
 					
 					triangle.setInputNode = function(node) {
 						inputNode = node;
+						
+						if (node === null) {
+							saveData.name = null;
+							saveData.compIndex = null;
+							saveData.input = false;
+							saveData.outputIndex = null;
+						} else {
+							if (!node.customInput) {
+								saveData.name = node.componentBlock.name;
+								saveData.compIndex = workspace.componentIndex(node.componentBlock);
+								saveData.input = false;
+								saveData.outputIndex = node.outputIndex;
+							} else {
+								saveData.name = null;
+								saveData.compIndex = node.inputIndex;
+								saveData.input = true;
+								saveData.outputIndex = null;
+							}
+						}
 						//internalComponent.inputs[inputIndex].setInput(node.internalComponent, node.outputIndex);
 					}
 					
@@ -775,7 +915,29 @@
 					inputNodes.appendChild(node);
 					inputTriangles.appendChild(triangle);
 					workspace.appendChild(path);
+					
+					/*********************************** Save Data ***********************************/
+					var saveData = Object.create(null);
+					saveData.name = null;
+					saveData.input = false;
+					saveData.compIndex = null;
+					saveData.outputIndex = null;
+					
+					componentBlock.saveData.inputs.push(saveData);
 				}
+				
+				// Creates and adds svg circles to output nodes
+				for (var i = 0; i < outputs; i++) {
+					addOutput(i);
+				}
+				
+				// Creates and adds svg circles and triangles to input nodes and input triangles
+				for (var i = 0; i < inputs; i++) {
+					addInput(i);
+				}
+				
+				componentBlock.addOutput = function() {addOutput(); updatePaths()};
+				componentBlock.addInput = function() {addInput(); updatePaths()};
 				
 				// Creates structure of component block
 				outputNodesWrapper.appendChild(outputNodes);
@@ -790,6 +952,7 @@
 				// Reference to the block's workspace
 				componentBlock.workspace = workspace;
 				
+				componentBlock.style.left = "0px";
 				componentBlock.style.top = "60px";
 				
 				function updatePaths() {
@@ -822,16 +985,38 @@
 				}
 				
 				componentBlock.rename = function(newName) {
+					workspace.componentTab.saveData.componentBlocks.forEach(function(comp) {
+						comp.inputs.forEach(function(input) {
+							if (input.name === name)
+								input.name = newName;
+						});
+					});
+					
+					workspace.componentTab.saveData.outputs.forEach(function(output) {
+							if (output.name === name)
+								output.name = newName;
+					});
+				
 					span.innerHTML = newName;
 					name = newName;
+					
+					saveData.name = newName;
+					
 					updatePaths();
 				}
 				
 				componentBlock.updatePos = function(x, y) {
 					componentBlock.style.left = x + "px";
 					componentBlock.style.top = y + "px";
-					
+						
+					saveData.x = x;
+					saveData.y = y;
+						
 					componentBlock.updatePaths();
+				}
+				
+				componentBlock.getPosition = function() {
+					return {x: parseInt(componentBlock.style.left), y: parseInt(componentBlock.style.top)};
 				}
 				
 				// Makes the block draggable once it has been added to the DOM
@@ -865,7 +1050,6 @@
 							y = parent.offsetHeight;
 						
 						componentBlock.updatePos(x, y);
-							
 					}
 					draggable(componentBlock, componentBlock.updatePos, onMousedown, onMouseup);
 					observer.disconnect();
@@ -906,6 +1090,7 @@
 				Object.defineProperty(componentBlock, "internalComponent", {get(){return internalComponent}});
 				Object.defineProperty(componentBlock, "outputs", {get(){return outs}});
 				Object.defineProperty(componentBlock, "inputs", {get(){return connections}});
+				Object.defineProperty(componentBlock, "name", {get(){return name}});
 				
 				return componentBlock;
 			}
@@ -1130,20 +1315,27 @@
 				componentTab.del = del;
 				componentTab.rename = rename;
 				Object.defineProperty(componentTab, "name", {get(){return name}});
+				//componentTab.name = name;
 				
 				// Renames the component tab
 				function renameComponent() {
 					swal("Rename component:", {
 						content: "input",
+						buttons: true
 					})
 					.then(function(newName) {
+						if (newName === "" || newName === null)
+							return;
+						
 						if (!nameInUse(newName)) {
+							//currentSave.renameTab(componentTab, newName);
+							saveData.name = newName;
 							compName.innerHTML = newName;
 							name = newName;
 							componentTab.workspace.rename(newName);
 							renameInstances(newName);
 						} else {
-							swal("The name " + name + " is already in use");
+							swal("The name " + newName + " is already in use");
 						}
 					});
 				}
@@ -1162,6 +1354,21 @@
 					componentInstances = [];
 				}
 				
+				function addInputToInstances() {
+					componentInstances.forEach(function(comp) {
+						comp.addInput();
+					});
+				}
+				
+				function addOutputToInstances() {
+					componentInstances.forEach(function(comp) {
+						comp.addOutput();
+					});
+				}
+				
+				componentTab.addInputToInstances = addInputToInstances;
+				componentTab.addOutputToInstances = addOutputToInstances;
+				
 				// Deletes the component tab
 				function deleteComponentTab() {
 					swal({
@@ -1173,6 +1380,7 @@
 					.then(function(value) {
 						if (value) {
 							deleteComponent(componentTab);
+							currentSave.data.splice(currentSave.data.indexOf(saveData), 1);
 						}
 					});
 				}
@@ -1212,15 +1420,20 @@
 				
 				backpack.tabs.push(componentTab);
 				
+				if (nand)
+					return componentTab;
+				
+				/*********************************** Save Data ***********************************/
+				var saveData = Object.create(null);
+				saveData.name = name;
+				saveData.outputs = [];
+				saveData.componentBlocks = [];
+				saveData.inputs = 0;
+				currentSave.data.push(saveData);
+				componentTab.saveData = saveData;
+				
 				return componentTab;
 			}
-			
-			// Add nand component to backpack.tabs
-			/*var nandTab = document.getElementsByClassName("componentTab")[0];
-			nandTab.compName = nandTab.getElementsByClassName("compName")[0];
-			nandTab.add = nandTab.getElementsByClassName("add")[0];
-			nandTab.name = "nand";
-			backpack.tabs.push(nandTab);*/
 			
 			function initComponent(name, nand = false) {
 				// Default name if name is not defined
@@ -1234,6 +1447,7 @@
 					componentTab.workspace = componentWorkspace;
 					componentWorkspace.componentTab = componentTab;
 					workspaces.select(componentWorkspace);
+					//currentSave.addTab(componentTab);
 				}
 				
 				backpack.appendChild(componentTab);
@@ -1286,15 +1500,22 @@
 					fileReader.readAsArrayBuffer(file);
 			});
 			
+			var save = document.getElementById("save");
+			
+			save.onclick = downloadSave;
+			
 			var d;
 			
 			function load(json) {
 				d = JSON.parse(json);
 				
-				backpack.tabs.forEach(function(tab) {
-					if (tab.name !== "nand")
-						deleteComponent(tab);
-				});
+				currentSave.data = [];
+				
+				while (backpack.tabs.length !== 1)
+					deleteComponent(backpack.tabs[1]);
+				
+				//console.log(currentSave.data);
+				//console.log(backpack.tabs);
 				
 				// Creating component tabs
 				d.forEach(function(component, i) {
@@ -1311,21 +1532,16 @@
 						outputs.push(currTab.workspace.addOutput());
 					}
 					
-					var componentBlocks = {};
 					var components = [];
 					
 					// Add component blocks
 					component.componentBlocks.forEach(function(block) {
-						if (componentBlocks[block.name] === undefined)
-							componentBlocks[block.name] = [];
-						
 						var blockTab = backpack.tabs.find(function(tab) {
 							return tab.name === block.name;
 						});
 						
 						var compBlock = blockTab.addComponentToWorkspace();
 						compBlock.updatePos(block.x, block.y);
-						componentBlocks[block.name].push(compBlock);
 						components.push(compBlock);
 					});
 					
@@ -1334,24 +1550,39 @@
 						let blockData = component.componentBlocks[i];
 						
 						blockData.inputs.forEach(function(input, j) {
-							if (input.input == true) {
+							if (input.input === true) {
 								block.connectInputTo(inputs[input.compIndex], 0, j);
 							} else {
-								if (input.inputName === null)
+								if (input.name === null)
 									return;
-								block.connectInputTo(componentBlocks[input.inputName][input.compIndex], input.outputIndex, j);
+								//block.connectInputTo(componentBlocks[input.name][input.compIndex], input.outputIndex, j);
+								block.connectInputTo(components[input.compIndex], input.outputIndex, j);
 							}
 						});
 					});
 					
-					component.outputs.forEach(function(output, i) {
-						if (output.inputName === null)
-							return;
-						
-						let outputBlock = outputs[i]
-						outputBlock.connectInputTo(componentBlocks[output.inputName][output.compIndex], output.outputIndex, i);
+					component.outputs.forEach(function(output, j) {
+						let outputBlock = outputs[j]
+						if (output.input === true) {
+							outputBlock.connectInputTo(inputs[output.compIndex], 0, j);
+						} else {
+							if (output.name === null)
+								return;
+							
+							//outputBlock.connectInputTo(componentBlocks[output.name][output.compIndex], output.outputIndex, j);
+							outputBlock.connectInputTo(components[output.compIndex], output.outputIndex, j);
+						}
 					});
 				});
+			}
+			
+			function downloadSave() {
+				let bitArray = compressToBitArray(JSON.stringify(currentSave.data));
+				downloadBitArray(bitArray, "save.bin");
+			}
+			
+			if (localStorage.getItem("save") !== null) {
+				load(localStorage.getItem("save"));
 			}
 		</script>
 	</body>
