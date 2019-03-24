@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Meal Calculator</title>
+	</head>
+	<body>
+		<div class="rowFlex">
+			<div>
+				<span>Tax: </span>
+				<input type="text"></input>
+			</div>
+			<span class="divider">|</span>
+			<div>
+				<span>Tip: </span>
+				<input type="text"></input>
+			</div>
+			<span class="divider">|</span>
+			<div>
+				<span>Total: $</span>
+				<input type="text">
+			</div>
+		</div>
+		<br>
+		<table>
+			<thead>
+				<tr>
+					<th>People:</th>
+					<th>$ Spent:</th>
+					<th>$ Owed</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		
+		<div class="add">
+			<div class="vertical"></div>
+			<div class="horizontal"></div>
+		</div>
+		
+		<style>
+			body {
+				font-family: Courier;
+			}
+			
+			.rowFlex {
+				display: flex;
+				flex-flow: row nowrap;
+				justify-content: flex-start;
+			}
+			
+			.rowFlex > div > span {
+				font-weight: bold;
+			}
+			
+			div > input {
+				width: 50px;
+			}
+			
+			.divider {
+				padding: 0px 5px 0px 5px;
+			}
+			
+			table {
+				display: inline-table;
+				border: 2px solid black;
+				border-collapse: collapse;
+				text-align: center;
+			}
+			
+			th, td {
+				border: 2px solid black;
+				padding: 3px;
+				min-width: 100px;
+				max-width: 100px;
+			}
+			
+			td > span {
+				max-width: 20px;
+			}
+			
+			td > input {
+				border: none;
+				outline: none;
+				max-width: 100px;
+			}
+			
+			.add {
+				margin-top: 5px;
+				margin-left: 5px;
+				min-width: 25px;
+				max-width: 25px;
+				height: 25px;
+				border: 2px solid black;
+				background-color: white;
+				border-radius: 5px;
+				cursor: pointer;
+				-webkit-transition: .2s;
+				transition: background-color .2s;
+			}
+
+			.add:hover {
+				background-color: #ededed;
+			}
+
+			.add > .vertical {
+				position: relative;
+				margin-top: 4.5px;
+				margin-left: 10px;
+				min-width: 15px;
+				max-width: 15px;
+				height: 15px;
+				border-left: 4px solid black;
+			}
+			
+			.add > .horizontal {
+				position: relative;
+				margin-top: -9px;
+				margin-left: 4.5px;
+				min-width: 15px;
+				max-width: 15px;
+				height: 15px;
+				border-top: 4px solid black;
+			}
+		</style>
+		
+		<script>
+			var tbody = document.getElementsByTagName("tbody")[0];
+			var add = document.getElementsByClassName("add")[0];
+			
+			add.onclick = function() {
+				var tr = document.createElement("tr");
+				var tds = [];
+				var inputs = [];
+				var spans = [];
+				
+				for (var i = 0; i < 3; i++) {
+					let td = document.createElement("td");
+					let input = document.createElement("input");
+					
+					input.type = "text";
+					
+					inputs.push(input);
+					tds.push(td);
+					
+					if (i > 0) {
+						let span = document.createElement("span");
+						span.innerHTML = "$";
+						td.appendChild(span);
+					}
+					
+					td.appendChild(input);
+					tr.appendChild(td);
+				}
+				
+				tbody.appendChild(tr);
+			}
+		</script>
+	</body>
+</html>
