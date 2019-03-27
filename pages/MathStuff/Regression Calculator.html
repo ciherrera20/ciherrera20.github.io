@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html>
+
+	<head>
+	
+		<title>Regression Equation Calculator</title>
+		
+	</head>
+	
+	<body>
+	
+		<h3>Regression Equation Calculator</h3>
+		
+		<hr>
+		
+		<table id="dataTable">
+			<tr id="row1" class="row">
+				<th class="cell">#</th>
+				<th class="cell">x</th>
+				<th class="cell">y</th>
+			</tr>
+			<tr id="row2" class="row">
+				<td class="cell">1.</td>
+				<td class="cell"><input type="text" id="x1" class="input" placeholder="x1"></input></td>
+				<td class="cell"><input type="text" id="y1" class="input" placeholder="y1"></input></td>
+			</tr>
+			<tr id="row3" class="row">
+				<td class="cell">2.</td>
+				<td class="cell"><input type="text" id="x2" class="input" placeholder="x2"></input></td>
+				<td class="cell"><input type="text" id="y2" class="input" placeholder="y2"></input></td>
+			</tr>
+			<tr id="row4" class="row">
+				<td class="cell">3.</td>
+				<td class="cell"><input type="text" id="x3" class="input" placeholder="x3"></input></td>
+				<td class="cell"><input type="text" id="y3" class="input" placeholder="y3"></input></td>
+			</tr>
+		</table>
+		
+		<input type="button" value="Add Row" id="addRow" class="button" onclick="addRow()">
+		
+		<br>
+		
+		<input type="text" id="degree" class="input" placeholder="degree"></input>
+		
+		<hr>
+		
+		<br>
+		
+		<input type="button" value="Calculate" id="calculate" class="button" onclick="calculate()"></input>
+		
+		<br>
+		
+		<h3>Result:<span style="color:red" id="result"></span></h3>
+		
+		<style>
+			#dataTable, .row, .cell {
+				border: 2px solid black;
+				border-collapse: collapse;
+			}
+			
+			.input {
+				color: black;
+				max-width: 50px;
+				min-width: 50px;
+				border: 2px solid black;
+				text-align: center;
+			}
+			
+			#button {
+				border: 2px solid black;
+				background: white;
+				color: black;
+				font-weight: bold;
+			}
+			
+			#result {
+				background:#58ACFA;
+				border:2px solid black;
+				border-radius:5px;
+				padding:3px;
+				display:none;
+			}
+		</style>
+		
+		<script src="C:\Users\ciherrera20\OneDrive - Chaminade College Preparatory\HTML documents\Javascript Files\Math Functions.js"></script>
+		
+		<script>
+			function addRow() {
+				var table = document.getElementById('dataTable');
+				var rows = document.getElementsByClassName('row');
+				
+				var newRow = document.createElement('tr');
+				
+				var numCell = document.createElement('td');
+				var xCell = document.createElement('td');
+				var yCell = document.createElement('td');
+				
+				var xInput = document.createElement('input');
+				var yInput = document.createElement('input');
+				
+				xInput.type = "text";
+				xInput.id = "x" + rows.length.toString();
+				xInput.className = "input";
+				xInput.placeholder = "x" + rows.length.toString();
+				
+				yInput.type = "text";
+				yInput.id = "y" + rows.length.toString();
+				yInput.className = "input";
+				yInput.placeholder = "y" + rows.length.toString();
+				
+				numCell.className = "cell";
+				numCell.innerHTML = rows.length.toString() + '.';
+				xCell.className = "cell";
+				yCell.className = "cell";
+				
+				newRow.id = "row" + (rows.length + 2).toString();
+				newRow.className = "row";
+				
+				xCell.appendChild(xInput);
+				yCell.appendChild(yInput);
+				newRow.appendChild(numCell);
+				newRow.appendChild(xCell);
+				newRow.appendChild(yCell);
+				table.appendChild(newRow);
+			}
+			
+			function calculate() {
+				var rows = document.getElementsByClassName('row');
+				var xRaw = [];
+				var yRaw = [];
+				for(var a = 1; a < rows.length; a++) {
+					xRaw.push(rows[a].children[1].children[0].value);
+					yRaw.push(rows[a].children[2].children[0].value);
+				}
+				console.log(xRaw);
+				console.log(yRaw);
+				var x = [];
+				var y = [];
+				for(var a = 0; a < xRaw.length; a++) {
+					if(Number(xRaw[a]).toString() === "NaN" || Number(yRaw[a]).toString() === "NaN")
+						console.log("NaN");
+					else {
+						x.push(Number(xRaw[a]));
+						y.push(Number(yRaw[a]));
+					}	
+				}
+				console.log(x);
+				console.log(y);
+				var degree = Number(document.getElementById('degree').value);
+				if(degree.toString() === "NaN") {
+					console.log(degree);
+					return;
+				}
+				console.log(degree);
+				var factors = getFactors(x, y, degree);
+				console.log(factors);
+				var result = document.getElementById('result');
+				result.style.display = "block";
+				var str = "";
+				for(var a = 0; a < factors.length; a++) {
+					if(a === (factors.length - 1))
+						str += find_rational(factors[a][0])[0].toString() + " / " + find_rational(factors[a][0])[1].toString();
+					else 
+						str += find_rational(factors[a][0])[0].toString() + " / " + find_rational(factors[a][0])[1].toString() + ", ";
+				}
+				console.log(str);
+				result.innerHTML = str;
+				//return factors;
+			}
+		</script>
+	</body>
+</html>

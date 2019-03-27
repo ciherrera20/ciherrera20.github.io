@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>System of Equation Solver</title>
+	</head>
+	<body style="background:linear-gradient(#0080FF, rgba(0, 128, 255, 0.29)); text-align:center; overflow-x:hidden; overflow-y:visible; background-repeat:no-repeat; background-attachment:fixed; text-align:center">
+		<div class="div" style="max-height:100px; min-height:100px; max-width:1020px; min-width:1020px">
+			<h1>Systems of Equation Solver</h1>
+		</div ><br>
+		
+		<div class="div" style="min-height:820px; max-width:1020px; min-width:1020px; text-align:left; background-repeat:no-repeat; background-attachment:fixed">
+			<h3 style="display:inline">Enter how many variables you want to solve for: </h3>
+			<input type="text" class="input" style="display:inline" id="numOfVars"></input>
+			<input type="submit" class="submit" style="display:inline" onclick="createEquations(Number(document.getElementById('numOfVars').value));"></input>
+			<input type="button" class="submit" style="display:inline" onclick="location.reload()" value="Reset"></input>
+			<div id="eqns" style="max-width:1020px; min-width:1020px; text-align:center; background-color:rgba(0, 0, 0, 0)"></div>
+			<h3 style="display:none" class="calculate">Press to calculate solutions: </h3>
+			<input id="calculate" type="button" class="calculate" style="display:none" onclick="document.getElementById('result').innerHTML = calculate(); document.getElementById('result').style.display = 'inline';" value="Calculate"></input>
+			<br><br>
+			<h3 class="calculate" style="display:none">Result:<span style="color:red" id="result" class="result"></span></h3>
+		</div>
+		<style>
+			.div {
+				background:linear-gradient(white, #C8CACA);
+				color:black;
+				border:4px solid black;
+				padding:0px;
+				margin-left:400px;
+			}
+			
+			.resultMatrix, .coefficientMatrix, .input {
+				background:linear-gradient(#BDBDBD, white);
+				color:black;
+				max-width:50px;
+				min-width:50px;
+				border:2px solid black;
+			}
+
+			#calculate, .submit {
+				border:2px solid black;
+				background:gray;
+				color:black;
+				font-weight:bold;
+			}
+			
+			.result {
+				background:#58ACFA;
+				border:2px solid black;
+				border-radius:5px;
+				padding:3px;
+				display:none;
+			}
+		</style>
+		<script>
+			var submitted = false;
+			var div = document.getElementsByClassName("div");
+			var calc = document.getElementsByClassName("calculate");
+			var body = document.body;
+			var letters = ["x", "y", "z", "w", "v", "u", "t", "s", "r", "q", "p", "o", "n", "m", "l", "k", "j", "i", "h", "p", "a", "b", "c", "d", "e", "f"];
+			var eqns = document.getElementById("eqns");
+			var coefMatrix = [];
+			var resultsMatrix = [];
+			var uagent = navigator.userAgent.toLowerCase();
+			
+			function DetectIphone() {
+				if(uagent.search("iphone") > -1) {
+					uagent = true;
+					for(var a = 0; a < div.length; a++) {
+						div[a].style.maxWidth = "500px";
+						div[a].style.minWidth = "500px";
+					}
+					eqns.style.maxWidth = "500px";
+					eqns.style.minWidth = "500px";
+					div[1].style.minHeight = "700px";
+					document.body.style.overflowX = "hidden";
+				} else
+					uagent = false;
+			}
+			
+			DetectIphone();
+			
+			setInterval(function() {
+				if(!uagent) {
+					for(var a = 0; a < div.length; a++)
+						div[a].style.marginLeft = ((window.innerWidth) / 2 - (Number(div[a].style.maxWidth.replace("px", "")) / 2)).toString() + "px";
+				} else {
+					for(var a = 0; a < div.length; a++)
+						div[a].style.marginLeft = "0px";
+				}
+				if(submitted) {
+					for(var a = 0; a < calc.length; a++)
+						calc[a].style.display = "inline";
+				}
+			}, 100);
+			
+			function copyMatrix(list) {
+				var b = [];
+				for(var a = 0; a < list.length; a++) {
+					b.push([]);
+					for(var c = 0; c < list[0].length; c++)
+						b[a].push(list[a][c]);
+				}
+				return b;
+			}
+			
+			function getDeterminant(matrix) {
+				if(matrix.length != matrix[0].length)
+					return "Invalid input";
+				if(matrix.length == 2)
+					return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+				else {
+					var determinants = [];
+					var b = [];
+					for(var a = 0; a < matrix.length; a++) {
+						b = copyMatrix(matrix);
+						b.shift();
+						for(var c = 0; c < matrix.length - 1; c++)
+							b[c].splice(a, 1);
+						determinants.push(getDeterminant(b));
+					}
+					b = 0;
+					if(Math.round(matrix.length / 2) == (matrix.length / 2))
+						coef = -1;
+					else
+						coef = 1;
+					for(var a = 0; a < matrix.length; a++) {
+						b += matrix[0][a] * determinants[a] * coef;
+						coef *= -1;
+					}
+					if(Math.round(matrix.length / 2) == (matrix.length / 2))
+						return -1 * b;
+					else
+						return b;
+				}  
+			}
+			
+			function getMatrixOfMinors(matrix) {
+				if(matrix.length != matrix[0].length)
+					return "Invalid input";
+				else {
+					if(matrix.length == 2)
+						return [[matrix[1][1], matrix[1][0]], [matrix[0][1], matrix[0][0]]];
+					else {
+						var minorMatrix = copyMatrix(matrix);
+						for(var a = 0; a < matrix.length; a++) {
+							for(var b = 0; b < matrix.length; b++) {
+								var d = copyMatrix(matrix);
+								d.splice(a, 1);
+								for(var c = 0; c < matrix.length - 1; c++)
+									d[c].splice(b, 1);
+								minorMatrix[a][b] = getDeterminant(d);
+							}
+						}
+						return minorMatrix;
+					}
+				}
+			}
+			
+			function getMatrixOfCofactors(matrix) {
+				if(matrix.length != matrix[0].length)
+					return "Invalid input";
+				else {
+					var coef = 1;
+					var cofactorMatrix = copyMatrix(matrix);
+					for(var a = 0; a < matrix.length; a++) {
+						for(var b = 0; b < matrix.length; b++) {
+							cofactorMatrix[a][b] *= coef;
+							coef *= -1;
+						}
+						if(Math.round(matrix.length / 2) == (matrix.length / 2))
+							coef *= -1;
+					}
+					return cofactorMatrix;
+				}
+			}
+			
+			function adjugateMatrix(matrix) {
+				if(matrix.length != matrix[0].length)
+					return "Invalid input";
+				else {
+					var adjugatedMatrix = copyMatrix(matrix);
+					for(var a = 0; a < matrix.length; a++) {
+						for(var b = 0; b < matrix.length; b++)
+							adjugatedMatrix[a][b] = matrix[b][a];
+					}
+					return adjugatedMatrix;
+				}
+			}
+			
+			function multiplyMatrices(matrix1, matrix2) {
+				try {
+					if(matrix1[0].length != matrix2.length)
+						return "Cannot multiply";
+				} catch(err) {
+					console.log(err);
+				}
+				var matrix3 = [];
+				if(Number(matrix1).toString() == "NaN") {
+					for(var a = 0; a < matrix1.length; a++) {
+						var matrixRow = [];
+						for(var b = 0; b < matrix2[0].length; b++) {
+							var d = 0;
+							for(var c = 0; c < matrix2.length; c++)
+								d += matrix1[a][c] * matrix2[c][b];
+							matrixRow.push(d);
+						}
+						matrix3.push(matrixRow);
+					}
+					return matrix3;
+				} else {
+					matrix3 = copyMatrix(matrix2);
+					for(var a = 0; a < matrix2.length; a++) {
+						for(var b = 0; b < matrix2.length; b++)
+							matrix3[a][b] = matrix2[a][b] * matrix1;
+					}
+					return matrix3;
+				}
+			}
+			
+			function invertMatrix(matrix) {
+				/*var newMatrix = copyMatrix(matrix);
+				newMatrix = getMatrixOfMinors(newMatrix);
+				newMatrix = getMatrixOfCofactors(newMatrix);
+				newMatrix = adjugateMatrix(newMatrix);
+				return multiplyMatrices((1 / getDeterminant(matrix)), newMatrix);*/
+				return multiplyMatrices(1 / getDeterminant(matrix), adjugateMatrix(getMatrixOfCofactors(getMatrixOfMinors(matrix))));
+			}
+			
+			function createEquations(num) {
+				if(num <= 1) {
+					alert("The number entered is too small");
+					return "Too small";
+				} else if(num >= 26) {
+					alert("The number entered is too large");
+					return "Too large";
+				}
+				if(submitted)
+					return "Cannot create";
+				submitted = true;
+				var newline = document.createElement("br");
+				eqns.appendChild(newline);
+				newline = document.createElement("hr");
+				eqns.appendChild(newline);
+				for(var a = 0; a < num; a++) {
+					for(var b = 0; b < num + 1; b++) {
+						var elem = document.createElement("input");
+						elem.type = "text";
+						elem.className = "coefficientMatrix";
+						elem.placeholder = "coef";
+						if(b == num) {
+							elem.placeholder = "result";
+							elem.className = "resultMatrix";
+						}
+						eqns.appendChild(elem);
+						if(b != num) {
+							elem = document.createElement("p");
+							if(b == num - 1)
+								elem.innerHTML = letters[b] + " = ";
+							else
+								elem.innerHTML = letters[b] + " + ";
+							elem.style.display = "inline";
+							eqns.appendChild(elem);
+						}
+					}
+					newline = document.createElement("br");
+					eqns.appendChild(newline);
+					newline = document.createElement("hr");
+					eqns.appendChild(newline);
+				}
+			}
+			
+			function fix(matrix) {
+				var matrix2 = copyMatrix(matrix);
+				for(var a = 0; a < matrix.length; a++) {
+					for(var b = 0; b < matrix[0].length; b++)
+						matrix2[a][b] = Math.round(matrix[a][b] * Math.pow(10, 14)) / Math.pow(10, 14);
+				}
+				return matrix2;
+			}
+			
+			function calculate() {
+				coefMatrix = [];
+				resultsMatrix = [];
+				if(!submitted)
+					return "No inputs to calculate";
+				var inputMatrix1Elems = document.getElementsByClassName("coefficientMatrix");
+				var c = 0;
+				for(var a = 0; a < Math.sqrt(inputMatrix1Elems.length); a++) {
+					var matrix1Rows = [];
+					for(var b = 0; b < Math.sqrt(inputMatrix1Elems.length); b++) {
+						matrix1Rows.push(Number(inputMatrix1Elems[c].value));
+						c++;
+					}
+					coefMatrix.push(matrix1Rows);
+				}
+				var inputMatrix2Elems = document.getElementsByClassName("resultMatrix");
+				for(var a = 0; a < inputMatrix2Elems.length; a++) {
+					var matrix2Rows = [];
+					matrix2Rows.push(Number(inputMatrix2Elems[a].value));
+					resultsMatrix.push(matrix2Rows);
+				}
+				var result = multiplyMatrices(invertMatrix(coefMatrix), resultsMatrix);
+				result = fix(result);
+				var str = "";
+				for(var a = 0; a < result.length; a++) {
+					str += letters[a] + " = " + result[a][0].toString();
+					if(a != result.length - 1)
+						str += ", ";
+				}
+				return str;
+			}
+		</script>
+	</body>
+</html>
