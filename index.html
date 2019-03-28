@@ -4,11 +4,96 @@
 		<title>ciherrera20.github.io</title>
 	</head>
 	<body>
-		<h1>Some stuff:</h1>
-		<a href="pages/HuffmanCoding.html">Huffman Coding</a><br>
-		<a href="pages/LogicGates.html">Logic Gates</a><br>
-		<a href="pages/Custom Base64 Image Encoder.html">Base64 Image Encoder</a><br>
-		<a href="pages/Alpha Channel Steganography.html">Alpha Channel Steganography</a><br>
-		<a href="pages/MathIndex.html">Math Stuff</a><br>
+		<div class="columnFlex">
+			<h1>About</h1>
+			<p>
+				Christopher Herrera's personal website for hosting projects
+			</p>
+			<h1>Projects</h1>
+			<div id="projectsWrapper" class="rowFlex">
+				<a href="pages/HuffmanCoding.html" class="project">
+					<div class="projectLink">
+						<h3>Huffman Coding</h3>
+					</div>
+					<p class="description">
+						Reads an uploaded text file and compresses using Huffman Coding. The resulting file is about 60% the size of the original text file
+					</p>
+				</a>
+				<a href="pages/LogicGates.html" class="project">
+					<div class="projectLink">
+						<h3>Logic Gates</h3>
+					</div>
+					<p class="description">
+						A playground for experimenting with logic gates. The design is based off of the nandgame, but with my own code
+					</p>
+				</a>
+				<a href="pages/Custom Base64 Image Encoder.html" class="project">
+					<div class="">
+						<h3>Base64 Image Encoder</h3>
+					</div>
+					<p class="description">
+						Tool for getting the base 64 encoding of an image. Also allows for editing image transparency
+					</p>
+				</a>
+				<a href="pages/Alpha Channel Steganography.html" class="project">
+					<div class="projectLink">
+						<h3>Alpha Channel Steganography</h3>
+					</div>
+					<p class="description">
+						Encodes text in the alpha channels of an image
+					</p>
+				</a>
+				<a href="pages/MathIndex.html" class="project">
+					<div class="projectLink">
+						<h3>Math Projects</h3>
+					</div>
+					<p class="description">
+						A page with a couple different mathematical tools
+					</p>
+				</a>
+			</div>
+		</div>
+		
+		<style>
+			.columnFlex {
+				display: flex;
+				flex-flow: column nowrap;
+				justify-content: flex-start;
+			}
+
+			.rowFlex {
+				display: flex;
+				flex-flow: row nowrap;
+				justify-content: space-between;
+			}
+		
+			#projectsWrapper {
+				flex-wrap: wrap;
+			}
+		
+			.project {
+				color: black;
+				text-decoration: none;
+				border: 2px solid black;
+				margin: 2px;
+				padding: 5px;
+				flex-grow: 1;
+				-webkit-transition: .2s;
+				transition: background-color .2s;
+			}
+			
+			.project:hover {
+				background-color: #e0f5fc;
+			}
+			
+			.projectLink {
+				width: 100%;
+				text-align: center;
+			}
+			
+			.description {
+				max-width: 300px;
+			}
+		</style>
 	</body>
 </html>
