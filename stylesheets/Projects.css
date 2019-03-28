@@ -1,0 +1,40 @@
+.columnFlex {
+	display: flex;
+	flex-flow: column nowrap;
+	justify-content: flex-start;
+}
+
+.rowFlex {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: space-between;
+}
+
+#projectsWrapper {
+	flex-wrap: wrap;
+	justify-content: flex-start;
+}
+
+.project {
+	flex: 0 0 18%;
+	color: black;
+	min-height: 140px;
+	text-decoration: none;
+	border: 2px solid black;
+	margin: 2px;
+	padding: 5px;
+	-webkit-transition: .2s;
+	transition: background-color .2s;
+}
+
+.project:hover {
+	background-color: #eee;
+}
+
+.projectName {
+	width: 100%;
+	text-align: center;
+}
+
+.description {
+}

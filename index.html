@@ -2,6 +2,7 @@
 <html>
 	<head>
 		<title>ciherrera20.github.io</title>
+		<link rel="stylesheet" type="text/css" href="stylesheets/Projects.css">
 	</head>
 	<body>
 		<div class="columnFlex">
@@ -12,7 +13,7 @@
 			<h1>Projects</h1>
 			<div id="projectsWrapper" class="rowFlex">
 				<a href="pages/HuffmanCoding.html" class="project">
-					<div class="projectLink">
+					<div class="projectName">
 						<h3>Huffman Coding</h3>
 					</div>
 					<p class="description">
@@ -20,7 +21,7 @@
 					</p>
 				</a>
 				<a href="pages/LogicGates.html" class="project">
-					<div class="projectLink">
+					<div class="projectName">
 						<h3>Logic Gates</h3>
 					</div>
 					<p class="description">
@@ -28,7 +29,7 @@
 					</p>
 				</a>
 				<a href="pages/Custom Base64 Image Encoder.html" class="project">
-					<div class="">
+					<div class="projectName">
 						<h3>Base64 Image Encoder</h3>
 					</div>
 					<p class="description">
@@ -36,7 +37,7 @@
 					</p>
 				</a>
 				<a href="pages/Alpha Channel Steganography.html" class="project">
-					<div class="projectLink">
+					<div class="projectName">
 						<h3>Alpha Channel Steganography</h3>
 					</div>
 					<p class="description">
@@ -44,7 +45,7 @@
 					</p>
 				</a>
 				<a href="pages/MathIndex.html" class="project">
-					<div class="projectLink">
+					<div class="projectName">
 						<h3>Math Projects</h3>
 					</div>
 					<p class="description">
@@ -53,47 +54,5 @@
 				</a>
 			</div>
 		</div>
-		
-		<style>
-			.columnFlex {
-				display: flex;
-				flex-flow: column nowrap;
-				justify-content: flex-start;
-			}
-
-			.rowFlex {
-				display: flex;
-				flex-flow: row nowrap;
-				justify-content: space-between;
-			}
-		
-			#projectsWrapper {
-				flex-wrap: wrap;
-			}
-		
-			.project {
-				color: black;
-				text-decoration: none;
-				border: 2px solid black;
-				margin: 2px;
-				padding: 5px;
-				flex-grow: 1;
-				-webkit-transition: .2s;
-				transition: background-color .2s;
-			}
-			
-			.project:hover {
-				background-color: #e0f5fc;
-			}
-			
-			.projectLink {
-				width: 100%;
-				text-align: center;
-			}
-			
-			.description {
-				max-width: 300px;
-			}
-		</style>
 	</body>
 </html>
