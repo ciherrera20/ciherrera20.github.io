@@ -1,5 +1,5 @@
 body {
-	background-image: url("../images/Background.png");
+	background-image: url("../images/LogicGates/Background.png");
 	/* draggable: false; */
 }
 
@@ -63,7 +63,7 @@ body {
 	margin-right: 10px;
 	width: 35px;
 	height: 35px;
-	background-image: url("../images/trash.png");
+	background-image: url("../images/LogicGates/trash.png");
 	background-size: 35px 35px;
 	float: right;
 }
@@ -201,7 +201,7 @@ body {
 	border: 2px solid grey;
 	border-radius: 5px;
 	background-color: white;
-	background-image: url("../images/settings.png");
+	background-image: url("../images/LogicGates/settings.png");
 	background-size: 25px 25px;
 	cursor: pointer;
 	-webkit-transition: .2s;

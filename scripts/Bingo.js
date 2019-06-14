@@ -65,7 +65,7 @@ var Bingo = (function()
 					del.parentBingo = this;
 					
 					var img = document.createElement("img");
-					img.src = "../images/close.png";
+					img.src = "../images/Bingo/close.png";
 					img.className = "deleteIcon";
 					
 					label.appendChild(img);
