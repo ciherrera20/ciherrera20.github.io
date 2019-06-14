@@ -160,59 +160,6 @@ function populate(array, object = empty(), value = null) {
 				if (!eval)
 					return;
 				
-				// let topComponents = [];
-				
-				// function findTopComponents(comp) {
-					// if (comp.checkedForTop !== undefined) {
-						// console.log("Already checked for top");
-						// return;
-					// }
-					
-					// comp.checkedForTop = true;
-					// comp.visited = undefined;
-				
-					// let top = true;
-					// comp.outputComps.forEach(function(outputs) {
-						// outputs.forEach(function(outputComp) {
-							// if (outputComp !== undefined) {
-								// top = false;
-								// findTopComponents(outputComp);
-							// }
-						// });
-					// });
-					
-					// if (top) {
-						// console.log("Found a " + comp.name);
-						// topComponents.push(comp);
-					// }
-				// }
-				
-				// function clearVisits(comp) {
-					// if (comp.visited !== undefined) {
-						// console.log("Already visited");
-						// return;
-					// }
-					
-					// console.log("Clearing visit");
-					
-					// comp.visited = true;
-					// comp.checkedForTop = undefined;
-					
-					// comp.outputComps.forEach(function(outputs) {
-						// outputs.forEach(function(outputComp) {
-							// clearVisits(outputComp);
-						// });
-					// });
-				// }
-				
-				// findTopComponents(that);
-				// clearVisits(that);
-				
-				// topComponents.forEach(function(comp) {
-					// console.log("Evaluating top components, component is a " + comp.name);
-					// console.log(comp.outputs);
-					// comp.outputs;
-				// });
 				updateTop(that);
 			};
 			
@@ -286,22 +233,12 @@ function populate(array, object = empty(), value = null) {
 					visited = true;
 					objsVisited.push(that);
 					
-					//let lastInputs = inputs.map(function(input) {
-					//	return input.outputs[0];
-					//});
-					
 					let in1 = inputs[0].outputs[0];
 					let in2 = inputs[1].outputs[0];
 					lastOutputs = [!(in1 && in2)];
 					
-					//lastOutputs = [!(inputs[0].outputs[0] && inputs[1].outputs[0])];
-					
-					//let output = !(lastInputs[0] && lastInputs[1]);
-					//return [output];
-					
 					return lastOutputs;
 				} else {
-					//return evaluateLast();
 					return lastOutputs;
 				}
 			};

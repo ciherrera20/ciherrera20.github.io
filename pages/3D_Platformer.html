@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>2D to 1D</title>
+		
+		<style>
+		body, #screen {
+			overflow: hidden;
+			background-color: white;
+		}
+		
+		#screen {
+			position: absolute;
+			top: -1px;
+		}
+		
+		 #canvas {
+			position: absolute;
+			top: -1px;
+			background-color: white;
+			z-index: 0;
+			image-rendering: crisp-edges;
+		 }
+		 
+		 #canvas2 {
+			background-color: white;
+			display: none;
+			z-index: 1;
+		 }
+		</style>
+	</head>
+	<body>
+		<div id="screen">
+			<canvas id="canvas" width="10px" height="400px"></canvas>
+			<canvas id="canvas2" width="200px" height="200px"></canvas>
+		</div>
+		
+		<img id="background" style="display: none" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACAvzbMAAAbRUlEQVR4Xu3dX+i35V3A8e9vUewgWTHxoIlDe9rYDho+xFbMCGT0x7RneBQsDALRMKTEQNDMREHIA4k1J44OpKNBkvhgJREEVtOFwx2sVdsjjuxA0rJOpGi/EMWmPL/ne32u7+e67uu+7tdOu+7Pfd+v6/rx7vv4fH/P0W63O94V/O/yj95VsGq3u+zyzxats4gAAQIE+gp858U/Lbrhi/94X9G6IwEpcrKIAAECqxcQkNVvoRcgQIDAMgICsoy7uxIgQGD1AgKy+i30AgQIEFhGQECWcXdXAgQIrF5AQFa/hV6AAAECywgIyDLu7kqAAIHVCwjI6rfQCxAgQGAZAQFZxt1dCRAgsHqB9IBccvvpom+iv/Lg829+6dD/CgWeevmy3ytZes2HvvO7JeusIUCAQC+BRy+6uKgLRwLSZksEpI2rqQQItBcQkPbGF7yDgCy8AW5PgEC1gIBU06VdePzUy5fdu2+aP8LaJ+T/ToBAbwEB6S3+nvv5BLLwBrg9AQLVAgJSTZdzoYDkOJpCgEB/AQHpb/7eO/ojrOX3wBMQIFAhICAVaJmX+ASSqWkWAQI9BQSkp/Z57iUgC2+A2xMgUC0gINV0ORcKSI6jKQQI9BcoDsgVT1xb9I3Dc2fO+iZ6bB/9N5CYl9UECAwi8Oqlp4q6cCQgbXbMJ5A2rqYSINBeQEDaG1/wDgKy8Aa4PQEC1QICUk2Xc6GA5DiaQoBAfwEB6W/+rjsKyMIb4PYECFQLCEg1Xc6FApLjaAoBAv0FBKS/uU8gC5u7PQECOQICkuNYPcUnkGo6FxIgsLCAgLy9Afff9mzR32f+zHUfvj9zz37ny0/cWTLv6Ydv8v2aEihrCBDoJiAgAtLtsLkRAQJzCQiIgMx1or0NAQLdBAREQLodNjciQGAuAQERkLlOtLchQKCbgIAISLfD5kYECMwlICACMteJ9jYECHQTEBAB6XbY3IgAgbkEBERA5jrR3oYAgW4CAiIg3Q6bGxEgMJeAgCy8n7/5B3/1xZJHeOjWq28uWWcNAQIEegkISC/pE+4jIAtvgNsTIFAtICDVdDkXCkiOoykECPQXEJD+5u+6o4AsvAFuT4BAtYCAVNPlXCggOY6mECDQX0BA+pv7BLKwudsTIJAjICA5jtVTfAKppnMhAQILCwjIwhsgIAtvgNsTIFAtICDVdDkXCkiOoykECPQXEJD+5v4byMLmbk+AQI6AgOQ4Vk/xCaSa7l0XHp+6pejftD/61h/6t+VzyE0hsBOQhQ+BgORsgIDkOJpCICIgIBGtBmsFJAdVQHIcTSEQERCQiFaDtQKSg9orIJ986htFf1T2az/6wXtz3qxuyh99+9W7S6587pqP+yO9EihrzisgIAsfDAHJ2QABebejgOScK1MuLCAgC58QAcnZAAERkJyTZEpEQEAiWg3WCkgOqoAISM5JMiUiICARrQZrBSQHVUAEJOckmRIREJCIVoO1ApKDKiACknOSTIkIpAfkni/+8v2RBzhp7Vf+9W/vLJnzhRe+sOq/RSIgJbu8f42ACMj+U2JFtoCAZIsG5wlIEOyE5cePP3tfyaSj6z91V8m6k9b4a7yH6Ll2NgEBWXhHBSRnAwTEJ5Cck2RKREBAIloN1gpIDqqACEjOSTIlIiAgEa0GawUkB7VXQHKe1hQCcwgIyML7KCA5GyAgOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KAKSI6jKQQiAgIS0WqwVkByUAUkx9EUAhEBAYloNVgrIDmoApLjaAqBiEB6QM6dObvqb4ZH8DLWCkiG4m4nIDmOphCICAhIRKvBWgHJQRWQHEdTCEQEBCSi1WCtgOSgCkiOoykEIgICEtFqsFZAclAFJMfRFAIRAQGJaDVYKyA5qAKS42gKgYiAgES0GqwVkBxUAclxNIVAREBAIloN1gpIDqqA5DiaQiAiICARrQZrBSQHVUByHKNTfvbXHzkuuebjH/uxR0rWrWHNN/7hn28qec6nH75p+q80CEjJSWi4RkBycAUkxzE6RUBOFhOQ/7c5uuKJa4v+Pw1fJIz9CApIzOuk1QKS4xidIiACUnJmBKREqWKNgFSgnecSAclxjE4REAEpOTMCUqJUsUZAKtAEJActYYqACEjJMRKQEqWKNQJSgSYgOWgJUwREQEqOkYCUKFWsEZAKNAHJQUuYIiACUnKMBKREqWKNgFSgCUgOWsIUARGQkmMkICVKFWsEpAJNQHLQEqYIiICUHCMBKVGqWCMgFWgCkoOWMEVABKTkGAlIiVLFGgGpQBOQHDRTCBwo4JvoBwIeermAHCr41vW+B5LjaAqBiICARLQarBWQHFQByXE0hUBEQEAiWg3WCkgOqoDkOJpCICIgIBGtBmsFJAdVQHIcTSEQERCQiFaDtQKSgyogOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KAKSI6jKQQiAgIS0WqwVkByUAUkx9EUAhEBAXlb6/KP3lX0D2ZddvlnI7571155zX8W/VOfD9169c17h214gYBsePO9+mICAiIgix2+zBsLSKamWQTKBAREQMpOyuCrBGTwDfJ4Uwo8etHFRX9yM/3vwvJHWOs+3wKy7v3z9OsUEBCfQNZ5ct/z1AIyxTZ6iZUJCIiArOzInv9xBWSKbfQSKxMQEAFZ2ZEVkCk2zEtMISAgAjLFQfYJZIpt9BIrExAQAVnZkfUJZIoN8xJTCAiIgExxkH0CmWIbvcTKBARk4Q3zq0xyNkBAchxNIRAREJCIVoO1ApKDKiA5jqYQiAgISESrwVoByUGdMSD33/Zs0bd8P3Pdh+/PUTSFwFsCf/nkS3eWWNz85c+VLNtN/030IoUGiwQkB1VAchxNISAgKzoDApKzWQKS42gKAQFZ0RkQkJzNEpAcR1MICMiKzoCA5GyWgOQ4mkJAQFZ0BgQkZ7MEJMfRFAICsqIzICA5myUgOY6mEBCQFZ0BAcnZLAHJcTSFgICs6AwISM5mCUiOoykEBGRFZ0BAcjZLQHIcTSEgICs6AwKSs1kzBiRHxhQC7QT8KpN2tkWTBaSIae8iAdlLZAGBdAEBSSeNDRSQmNdJqwUkx9EUAhEBAYloNVgrIDmoApLjaAqBiICARLQarBWQHFQByXE0hUBEQEAiWg3WCkgOqoDkOJpCICIgIBGtBmsFJAdVQHIcTSEQEcgPyOtfeiDyACeufe7JO4rmfP7Go6J1gy4SkJyNEZAcR1MIRAQEJKLVYK2A5KC2CMhjv/DH95U83Q1/9it3layzhsBsAgKy8I4KSM4GCEiOoykEIgICEtFqsFZAclAFJMfRFAIRgVcvPXVcsr7830T330BKPN9ZIyAhrhMXC0iOoykEIgICEtFqsFZAclAFJMfRFAIRAQGJaDVYKyA5qAKS42gKgYiAgES0GqwVkBxUAclxNIVAREBAIloN1gpIDqqA5DiaQiAiICARrQZrBSQHVUByHE0hEBHID8iZs6v+ZngEL2OtgGQo7nYCkuNoCoGIgIBEtBqsFZAc1BYByXkyUwjMKyAgC++tgORsgIDkOJpCICIgIBGtBmsFJAdVQHIcTSEQERCQiFaDtQKSgyogOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KAKSI6jKQQiAgIS0WqwVkByUAUkx9EUAhEBAYloNVgrIDmoApLjaAqBiICARLQarBWQHFQByXE0hUBEQEAiWg3WCkgOqoDkOJpCICIgIBGtBmsFJAdVQHIcTSEQERCQiFaDtQKSgyogOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KCOGJCf+fm/Py55u7/+85/wG6xLoKwZTkBAFt4SAcnZAAHJcTSFQERAQCJaDdYKSA6qgOQ4mkIgIiAgEa0GawUkB1VAchxNIRAREJCIVoO1ApKDKiA5jqYQiAgISESrwVoByUEVkBxHUwhEBAQkotVgrYDkoApIjqMpBCICAhLRarBWQHJQBSTH0RQCEQEBiWg1WCsgOagCkuNoCoGIgIBEtBqsFZAcVAHJcTSFQERAQCJaDdYKSA7qiAHJeTNTCIwrICBv780lt58u+rUTP/jTP5K6m7/00m2PlAx86Narby5Zt9U1ArLVnffeSwoIiIAsef7S7i0gaZQGESgWEBABKT4sIy8UkJF3x7PNKiAgAjLF2RaQKbbRS6xMQEAEZGVH9vyPKyBTbKOXWJmAgAjIyo6sgEyxYV5iCgEBEZApDrJPIFNso5dYmYCACMjKjqxPIFNsmJeYQkBABGSKg+wTyBTb6CVWJiAgArKyI+sTyBQb5iWmEBCQhbfRrzLJ2QCfQHIcTSEQERCQiFaDtQKSgyogOY6mEIgICEhEq8FaAclB3VxAfuPRot/dtvvkdQ/kCJuSIvDck3cUzfn8jUdF6xZeJCALb4CA5GyAgJzgKCA5ByxrioBcWPLcmbOrKGfWeTh0joAcKvjW9QIiIDknqfEUARGQzCMmIDmaAiIgOSep8RQBEZDMIyYgOZoCIiA5J6nxFAERkMwjJiA5mgIiIDknqfEUARGQzCMmIDmaAiIgOSep8RQBEZDMIyYgOZoCIiA5J6nxFAERkMwjJiA5mgIiIDknqfEUARGQzCMmIDmaAiIgOSep8RQBEZDMIyYgOZqbC0gOmykEDhLwTfSD+A6/WEAON3xzgoDkOJpCICIgIBGtBmsFJAdVQHIcTSEQERCQiFaDtQKSgyogOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KAKSI6jKQQiAgIS0WqwVkByUAUkx9EUAhGB9IB8++qz90Qe4KS1X3thVzTn9FW7Vf/6eAHJOC3+FlaOoikEYgICEvNKXy0gOaQ+geQ4mkIgIiAgEa0GawUkB1VAchxNIRAREJCIVoO1ApKDKiA5jqYQiAgISESrwVoByUEVkBxHUwhEBAQkotVgrYDkoApIjqMpBN4UuOKJa49LJL56yzdLlu2OSgf6W1hFnu8sEpCY10mrBSTH0RQCArKiMyAgOZslIDmOphAQkBWdAQHJ2SwByXE0hYCArOgMCEjOZglIjqMpBBYNyLkzZ1f9zfDex0dAcsQFJMfRFAICsqIzICA5myUgOY6mEBCQFZ0BAcnZLAHJcTSFgICs6AwISM5mCUiOoykEBGRFZ0BAcjZLQHIcTSEgICs6AwKSs1kCkuNoCoGIQPqvMvG3sCL8u52AxLxOWi0gOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KAKSI6jKQQiAgIS0WqwVkByUAUkx9EUAhEBAYloNVgrIDmoApLjaAqBiICARLQarBWQHFQByXE0hUBEQEAiWg3WCkgOqoDkOJpCICIgIBGtBmsFJAdVQHIcTSEQERCQiFaDtQKSgyogOY6mEIgICEhEq8FaAclBFZAcR1MIRAQEJKLVYK2A5KAKSI6jKQQiAgIS0WqwVkByUAUkx9EUAhEBAYloNVgrIDmoApLjaAqBiICARLQarBWQHFQByXE0hUBEQEAiWg3WCkgO6tYC8vwzu+MSuSs/sbunZJ016xT42gtl+3v6qt1RizcUkLdVn7nhfUU/kJ++/CP3Zm7Ez73yW3eXzHv64ZuaHICSe69hjYCcf5cEZA2nt/4ZBaTeLvVKAUnl7D5MQASk+6Eb4IYCMsAmvPkIAjLIRlQ+hoAISOXRWfVlAjLI9gnIIBtR+RgCIiCVR2fVlwnIINsnIINsROVjCIiAVB6dVV8mIINsn4AMshGVjyEgAlJ5dFZ9mYAMsn0CMshGVD6GgAhI5dFZ9WUCMsj2CcggG1H5GAIiIJVHZ9WXCcgg2ycgg2xE5WMIiIBUHp1VXyYgg2yfgAyyEZWPsbWAVDK5jECqgG+ip3IatpSAgCwl775bFhCQLe/+RO8uIBNtpldZjYCArGarPOiFBATE+SDQX0BA+pu7YwMBAWmAaiSBPQIC4ohMISAgU2yjl1iZgICsbMM87vkFBMTJINBfQED6m7tjAwEBaYBqJAF/hOUMbEFAQLawy95xNAGfQEbbEc9TJSAgVWwuInCQgIAcxOfiUQQEZJSd8BxbEhCQLe32xO8qIBNvrlcbVkBAht0aDxYREJCIlrUEcgQEJMfRlIUFBGThDXD7TQoIyCa3fb6XFpD59tQbjS8gIOPvkScsEBCQAiRLCCQLCEgyqHHLCAjIMu7uum0BAdn2/k/z9qUB+dKv/uKdJS99/Qd+qGTZ7vHX/6No3Y3/9W9HRQstIrAiAQFZ0WZ51JMFBMTpINBfQED6m7tjAwEBaYBqJIE9AukB+eot30xB90cDKYybGSIgm9lqLzqQgIAMtBkepV5AQOrtXEmgVkBAauVcN5SAgAy1HR5mIwICspGNnv01BWT2HfZ+IwoIyIi74pnCAgISJnMBgYMFBORgQgNGEBCQEXbBM2xNQEC2tuOTvq+ATLqxXmtoAQEZens8XKlAaUBeu/VzRd9EL71v6boP/su3fBO9FMu61QgIyGq2yoNeSEBAnA8C/QUEpL+5OzYQEJAGqEYS2COQHpBzZ876qO7YdRcQkO7kbkhgJyAOwRQCAjLFNnqJlQkIyMo2zOOeX0BAnAwC/QUEpL+5OzYQEJAGqEYS8N9AnIEtCAjIFnbZO44m4BPIaDvieaoEBKSKzUUEDhIQkIP4XDyKgICMshOeY0sCxQG55PbTxyUwrzz4vL/GWwJlTarA8albis7na2/8Rep9/cNnqZyGrUxAQFa2YR73/AIC4mQQ6C8gIP3N3bGBgIA0QDWSwB4BAXFEphAQkCm20UusTEBAVrZhHtcfYTkDBEYREJBRdsJzHCTgE8hBfC4mUCUgIFVsLhpNQEBG2xHPswUBAdnCLm/gHQVkA5vsFYcTEJDhtsQD1QgISI2aawgcJiAgh/m5ehABARlkIzzGpgSKA3LFE9cWfdP3sT95qgjw05d/5N6ihRZtWuBvXvynu0sARj9Ps7xHyV5seU3pPl/12Hen+I0dArLl076Cdy/9gRSQFWzmBh6x9LwKyAmHwSeQDfyUdHzF0h9IAem4KW51okDpeRUQAfFj1EGg9AdSQDpshlvsFSg9rwIiIHsPkwWHC5T+QArI4dYmHC5Qel4FREAOP20m7BUo/YEUkL2UFnQQKD2vAiIgHY6jW5T+QAqIszKCQOl5FRABGeG8Tv8MpT+QAjL9UVjFC5aeVwERkFUc6LU/ZOkPpICsfafneP7S8yogAjLHiR/8LUp/IAVk8I3cyOOVntfNBcS/ib6RnwCvSYAAgUKB4m+iC0ihqGUECBDYiICAbGSjvSYBAgSyBQQkW9Q8AgQIbERAQDay0V6TAAEC2QICki1qHgECBDYiICAb2WivSYAAgWwBAckWNY8AAQIbEXj0oouL/qHBI3+NdyMnwmsSIECgUEBACqEsI0CAAIF3CxQHpPTfRD935uwU/9avg0KAAAECFxYQECeEAAECBKoEBKSKzUUECBAgICDOAAECBAhUCQhIFZuLCBAgQEBAnAECBAgQqBIQkCo2FxEgQICAgDgDBAgQmEzg+Wd2Rd8Qv/ITu3sOefXXPnaq6Poj3wM5hNm1BAgQ6CcgIP2s3YkAAQJTCQjIVNvpZQgQINBPQED6WbsTAQIEphIQkKm208sQIECgn4CA9LN2JwIECEwlICBTbaeXIUCAQD8BAeln7U4ECBCYSkBAptpOL0OAAIF+AgLSz9qdCBAgQKBCwK8yqUBzCQECBAjsdgLiFBAgQIBAlYCAVLG5iAABAgQExBkgQIAAgSoBAalicxEBAgQICIgzQIAAAQJVAgJSxeYiAgQIEBAQZ4AAAQIEqgQEpIrNRQQIECAgIM4AAQIECFQJvHrpqaJ/e92/iV7F6yICBAjMKyAg8+6tNyNAgEBTAQFpyms4AQIE5hUQkHn31psRIECgqYCANOU1nAABAvMKCMi8e+vNCBA4QOCNf7++6G8Yfd/7r7+/5Db/+8bjd5ase/8PP35Usm6ENQIywi54BgIEhhMQkP1bIiD7jawgQGCDAgKyf9MFZL+RFQQIbFBAQPZvuoDsN7KCAIENCgjI/k0XkP1GVhAgsEEBAdm/6QKy38gKAgQ2KCAg+zddQPYbWUGAwAYFBGT/pgvIfiMrCBDYoICA7N90AdlvZAUBAhsUEJD9my4g+42sIECAAIHzCAiIY0GAAAECVQICUsXmIgIECBAQEGeAAAECBKoEBGS32z1zw/uKfuvmT31o90CVsoveEfi7l3d3lHBc9dh3u/9G0q88uis6B5/68Q/8fsk7WJMj8OzXX//tkkk/eeOu+5kpea6Z1wiIgHQ93wLSlXuKmwnIuNsoIALS9XQKSFfuKW4mIONuo4AISNfTKSBduae4mYCMu40CIiBdT6eAdOWe4mYCMu42CoiAdD2dAtKVe4qbCci42yggAtL1dApIV+4pbiYg426jgAhI19MpIF25p7iZgIy7jQIiIF1Pp4B05Z7iZgIy7jYKiIB0PZ0C0pV7ipsJyLjbKCDj7o0nI0CAwNACAjL09ng4AgQIjCsgIOPujScjQIDA0AICMvT2eDgCBAiMKyAg4+6NJyNAgMDQAgIy9PZ4OAIECIwrICDj7o0nI0CAwNACAjL09ng4AgQIjCsgIOPujScjQIDA0AICMvT2eDgCBAiMKyAg4+6NJyNAgMDQAgIy9PZ4OAIECIwrICDj7o0nI0CAwNACAjL09ng4AgQIjCsgIOPujScjQIDA0AICMvT2eDgCBAiMKyAg4+6NJyNAgMDQAgIy9PZ4OAIECIwrICDj7o0nI0CAwNACwwXkv1/6/uMSsR/48P8clayzhgABAgTaCAhIG1dTCRAgML2AgEy/xV6QAAECbQQEpI2rqQQIEJheQECm32IvSIAAgTYCAtLG1VQCBAhMLyAg02+xFyRAgEAbAQFp42oqAQIEphcQkOm32AsSIECgjYCAtHE1lQABAtMLDBeQ6cW9IAECBCYRKA7IJbefLvoVI688+LxfMTLJ4fAaBAgQuJDAoxddXNSFIwFxkAgQIEDgewUExHkgQIAAgSoBAalicxEBAgQICIgzQIAAAQJVAgJSxeYiAgQIEBAQZ4AAAQIEqgQEpIrNRQQIECAgIM4AAQIECFQJCEgVm4sIECBAoDggu92u6BuHSAkQIECAwPcKvPnrSQTEmSBAgACBsICAhMlcQIAAAQJvCgiIc0CAAAECVQICUsXmIgIECBAQEGeAAAECBKoEBKSKzUUECBAgICDOAAECBAhUCQhIFZuLCBAgQEBAnAECBAgQqBL4P64PYIxq/KECAAAAAElFTkSuQmCC"></img>
+		<img id="player" style="display: none" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAABQUlEQVQ4T53VsW7CMBAG4PMDNENYOjAEiRfowlQJVWp3JPYIJrqyM3ToGnWFCcTeN+jCyksgpAwsTDxA0H/krMRxYrseMGDny50vdhR1tHU6LrrGMfa5PyjMk17ZLhBo0H92eXTKL4R56NEaIDAfSO4kIH7jew0Mxczwa2AIJumZmWjQFxNokc44uM1+x73A3qCGliuia87IbTSlp+MvUa9Pm59vnT2XvKsIwBaApF1zxrIs43++Jq8MYg76VlCiwkUuUO6lXj6aYC0921NoSdkKOqEqXqJYv2rjCImoWKdj4soZE5zbxJigweJv+xjyBR0RgiqC0LLS/NiUTb3PeSvL1gsGz8M3iuNYg1EU1cB/RQkULUkSxvRHZW2DI5VUdeqWSnqjqKp5BFoPWBSJ16Cl+iVky7B5wBoRt70C2gKhO9KCo7DaX/OdAAAAAElFTkSuQmCC"></img>
+		
+		<!--<h3 id="info"></h3>
+		<h3 id="scanTime"></h3>
+		<h3 id="castTime"></h3>
+		<h3 id="pointsNum"></h3>-->
+		
+		<script src="../Platform Maker/block_data.js"></script>
+		
+		<script>
+			//Canvases
+			var canvas = document.getElementById("canvas");
+			var rcanvas = document.createElement("canvas");
+			var lcanvas = document.createElement("canvas");
+			var canvas2 = document.getElementById("canvas2");
+			var imgcanvas = document.createElement("canvas");
+			var scanvas = document.createElement("canvas");
+			
+			//Canvas contexts
+			var ctx = canvas.getContext("2d");
+			var rctx = rcanvas.getContext("2d");
+			var lctx = lcanvas.getContext("2d");
+			var ctx2 = canvas2.getContext("2d");
+			var imgctx = imgcanvas.getContext("2d");
+			var sctx = scanvas.getContext("2d");
+			
+			//Disable that horrible blurring effect
+			//ctx.imageSmoothingEnabled = false;
+			rctx.imageSmoothingEnabled = false;
+			lctx.imageSmoothingEnabled = false;
+			ctx2.imageSmoothingEnabled = false;
+			imgctx.imageSmoothingEnabled = false;
+			sctx.imageSmoothingEnabled = false;
+			
+			//Other variables
+			var player = {Vx: 0, Vy: 0, /*x: 49, y: 382, */ x: 250, y: 385, cx: 0, cy: 4, width: 10, height: 10, col: {top: false, front: false, bottom: false, back: false}, skin: document.getElementById("player"), peeking: false};
+			var camera = {x: 100, y: 180, fov: 60 * (Math.PI / 180), resolution: 5, renderDistance: 200, angle: -27 * Math.PI / 180, maxoffset: 90 * Math.PI / 180, minoffset: -90 * Math.PI / 180, flipped: false, lastX: 0};
+			camera.alphaCoef = 0.1 * camera.renderDistance * camera.renderDistance;
+			var projHeight = canvas.height;
+			var maxWidth;
+			var points2D = [];
+			var points1D = [];
+			var blocks = [];
+			var keyState = [];
+			var locked = false;
+			var paused = false;
+			var bckgImg = document.getElementById("background");
+			var screen = document.getElementById("screen");
+			//var info = document.getElementById("info");=
+			//var scanTime = document.getElementById("scanTime");
+			//var castTime = document.getElementById("castTime");
+			//var pointsNum = document.getElementById("pointsNum");
+			
+			//var timeNow;
+			//var timeThen;
+			screen.requestFullscreen = screen.webkitRequestFullscreen || screen.mozRequestFullscreen;
+			screen.requestPointerLock = screen.requestPointerLock || screen.mozRequestPointerLock;
+			
+			//Set the dimensions of the screen
+			function setScreenDimensions() {
+				screen.style.width = window.innerWidth + "px";
+				screen.style.height = window.innerHeight + "px";
+				canvas.height = window.innerHeight;
+				canvas.width = window.innerWidth / 5;
+				maxWidth = window.innerWidth / 10;
+				canvas.style.left = ((window.innerWidth - canvas.width) / 2).toString() + "px";
+			}
+			setScreenDimensions();
+			
+			//Define FnimationFrame class
+			class AnimationFrame {
+				constructor(animate, fps) {
+					this.requestID = 0;
+					if(!fps)
+						this.fps = 60;
+					else
+						this.fps = fps;
+					this.animate = animate;
+				}
+		
+				start() {
+					let then = performance.now();
+					const interval = 1000 / this.fps;
+					const tolerance = 0.1;
+					
+					const animateLoop = (now) => {
+						this.requestID = requestAnimationFrame(animateLoop);
+						const delta = now - then;
+	
+						if(delta >= interval - tolerance) {
+							then = now - (delta % interval);
+							//info.innerHTML = "fps: " + Math.round(1000 / (delta)).toString();
+							this.animate(delta);
+						}
+					};
+					this.requestID = requestAnimationFrame(animateLoop);
+				}
+	
+				stop() {
+					cancelAnimationFrame(this.requestID);
+				}
+			}
+			
+			//Main drawing loop
+			var draw = new AnimationFrame(() => {
+				//screen.style.width = window.innerWidth + "px";
+				//screen.style.height = window.innerHeight + "px";
+				if(!paused) {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					
+					//Detect collisions before adjusting camera values
+					player.checkCollision();
+					
+					//Update camera positions
+					player.update();
+					
+					if(!camera.flipped)
+						camera.x = player.x + (player.width / 2) - player.cx;
+					else
+						camera.x = player.x - 1 - (player.width / 2) + player.cx;
+					camera.y = player.y - (player.height / 2) + player.cy;
+					//ctx2.drawImage(bckgImg, 0, 0, canvas2.width, canvas2.height);
+										
+					//Do some intersting stuff here
+					castRays();
+					//convertTo1D();
+				}
+			}, 30);
+			
+			draw.start();
+			
+			//Initialize imgcanvas and start the drawing loop when bckgImg loads
+			function bckgInit() {
+				//alert("bckg loaded");
+				imgcanvas.width = bckgImg.width;
+				imgcanvas.height = bckgImg.height;
+				imgctx.drawImage(bckgImg, 0, 0);
+				//draw.animate();
+			}
+			bckgInit();
+			
+			function skinInit() {
+				//player.width = player.skin.width;
+				//player.height = player.skin.height;
+				sctx.clearRect(0, 0, scanvas.width, scanvas.height);
+				scanvas.width = player.skin.width * 2;
+				scanvas.height = player.skin.height;
+				sctx.drawImage(player.skin, 0, 0);
+				sctx.save();
+				sctx.scale(-1, 1);
+				sctx.drawImage(player.skin, -2 * player.skin.width, 0);
+				sctx.restore();
+			}
+			skinInit();
+			
+			screen.onclick = () => {
+				screen.requestFullscreen();
+				//canvas.width = canvas.height / 15;
+				screen.requestPointerLock();
+				
+				if("onpointerlockchange" in document)
+					document.addEventListener("pointerlockchange", lockChangeAlert, false);
+				else if("onmozpointerlockchange", lockChangeAlert, false)
+					document.addEventListener("mozpointerlockchange", lockChangeAlert, false);
+				
+				screen.addEventListener("mousemove", camera.update, false);
+			}
+			
+			function lockChangeAlert() {
+				if(document.pointerLockElement === screen || document.mozpointerLockElement === screen)
+					locked = true;
+				else
+					locked = false;
+			}
+			
+			//Point2D class
+			class Point2D {
+				//Constructor for 2D points
+				constructor(x, y, pixel, angle) {
+					this.x = x;
+					this.y = y;
+					this.pixel = pixel;
+					this.angle = angle;
+					this.id = (bckgImg.width * y) + x;
+				}
+				
+				to1D() {
+					let y = ((Math.atan2(this.y - camera.y, this.x - camera.x) + (camera.fov / 2)) / camera.fov) * projHeight;
+					y = Math.round(y);
+					if(y > projHeight || y < 0)
+						y = undefined;
+					return y;
+				}
+			}
+			
+			//Point1D class
+			class Point1D {
+				//Constructor for 1D points
+				constructor(y, width, pixel) {
+					this.y = y;
+					this.width = width;
+					this.pixel = pixel;
+				}
+				
+				draw(canvas, a) {
+					let color = [this.pixel.data[0], this.pixel.data[1], this.pixel.data[2]],
+					ctx = canvas.getContext("2d");
+					ctx.fillStyle = "rgb(" + color.join(", ") + ")";
+					ctx.globalAlpha = this.pixel.data[3] / 255;
+					ctx.fillRect((canvas.width / 2) - (this.width / 2), a * camera.resolution, this.width, camera.resolution);
+				}
+			}
+			
+			class Ray {
+				constructor(x, y, angle, data) {
+					this.x = x;
+					this.y = y;
+					this.angle = angle;
+					this.data = data;
+					this.dist = undefined;
+				}
+				
+				//Find pixels in row
+				cast() {
+					//Adjusts the angle to be between 0 and 2pi
+					let ogangle = this.angle, cosOgangle = Math.cos(ogangle);
+					this.angle = this.angle - (Math.floor(this.angle / (2 * Math.PI)) * (2 * Math.PI));
+					
+					//Adjusts for cases where tangent is undefined
+					if(this.angle === 0)
+						this.angle = 0.001 * (Math.PI / 180);		
+					if(this.angle === Math.PI / 2)
+						this.angle = 90.01 * (Math.PI / 180);	
+					if(this.angle === Math.PI)
+						this.angle = 180.01 * (Math.PI / 180);	
+					if(this.angle === 3 * Math.PI / 2)
+						this.angle = 270.01 * (Math.PI / 180);	
+					if(this.angle === 2 * Math.PI)
+						this.angle = 360.01 * (Math.PI / 180);
+					
+					//Get the width and height of the background image for convenience
+					let width = imgcanvas.width;
+					let height = imgcanvas.height;
+					
+					//Calculate the slope and y intercept of the path the ray will explore
+					let m = Math.tan(this.angle + Math.PI);
+					let run = Math.cos(this.angle + Math.PI);
+					let rise = Math.sin(this.angle + Math.PI);
+					let b = (-m * this.x + this.y);
+					
+					//Sets a coefficient to account for cases where tangent gives the same value for different angles, such as 0 and 180
+					let coef = 1;
+					if(this.angle > 135 * (Math.PI / 180) && this.angle <= 315 * (Math.PI / 180))
+						coef = -1;
+				
+					//Function wrapper to allow return statements in the for loop 
+					let point = (() => {
+						let result = [], finished = false, slopeBool = Math.abs(m) > 1;
+						//Iterates for the longest possible ray, which is the length of the diagonal of the square
+						for(var a = 1; a < camera.renderDistance; a++) {
+							//if(finished)
+								//return result;
+							//Calculate an x and y position to check based on the slope and offset of the ray
+							if(slopeBool) {
+								//this.newX = (coef * a / m) + this.x; // a / m ensures that y will be an integer
+								//this.newY = m * this.newX + b;
+								this.newY = (coef * a) + this.y;
+								//if(Math.ceil(this.newX) === Math.floor(m * this.newY + b)) {
+									//this.newX = Math.ceil(this.newX);
+									//this.newY = (this.newX - b) / m;
+								//} else {
+									this.newX = (this.newY - b) / m;
+								//}
+							} else {
+								//this.newY = coef * a * m + this.y; // a * m ensures that x will be an integer
+								//this.newX = (this.newY - b) / m;
+								this.newX = (coef * a) + this.x;
+								//if(Math.ceil(this.newY) === Math.floor(m * this.newX + b)) {
+									//this.newY = Math.ceil(this.newY);
+									//this.newX = (this.newY - b) / m;
+								//} else {
+									this.newY = m * this.newX + b;
+								//}
+							}
+
+							//Get the pixel data for the specific x and y positions
+							let data = getPixel(this.data, Math.round(this.newX), Math.round(this.newY));
+							
+							//Get the distance between the pixel and the original x and y
+							this.dist = Math.hypot(this.newX - this.x, this.newY - this.y);
+							
+							//If the pixel is undefined, the ray has not found a pixel to render, or the pixel is further than the render distance, end the loop
+							if(!finished && result.length === 0 && (data.pixel[3] === undefined || a === camera.renderDistance - 1 || this.dist > camera.renderDistance)) {
+								this.pixel = new ImageData(new Uint8ClampedArray(4), 1, 1);
+								result.unshift(new Point2D(this.newX, this.newY, this.pixel, this.angle));
+								finished = true;
+							}
+							
+							let xcomp = this.dist * cosOgangle;
+							
+							//Check if the pixel is transparent
+							if(!finished && data.pixel[3] !== 0) {
+								if(result.length === 0 || !(result.last().pixel.data[0] === data.pixel[0] && result.last().pixel.data[1] === data.pixel[1] && result.last().pixel.data[2] === data.pixel[2])) {
+									//Alpha due to distance from a pixel
+									let distAlpha = (camera.alphaCoef / (xcomp * xcomp));
+									distAlpha = distAlpha > 1 ? 1 : distAlpha;
+									
+									//Set pixel data
+									this.pixel = new ImageData(new Uint8ClampedArray(4), 1, 1)
+									this.pixel.data[0] = data.pixel[0];
+									this.pixel.data[1] = data.pixel[1];
+									this.pixel.data[2] = data.pixel[2];
+									this.pixel.data[3] = data.pixel[3] * distAlpha;
+									
+									//If the pixel is completely solid, stop
+									if(data.pixel[3] === 255)
+										finished = true;
+									result.unshift(new Point2D(this.newX, this.newY, this.pixel, this.angle));
+								}
+								/*var red = new ImageData(new Uint8ClampedArray(4), 1, 1);
+								red.data[0] = 255;
+								red.data[1] = 0;
+								red.data[2] = 0;
+								red.data[3] = 255;
+								rctx.putImageData(red, Math.round(this.newX), Math.round(this.newY));*/
+							}
+							/*else if(!finished) {
+								var blue = new ImageData(new Uint8ClampedArray(4), 1, 1);
+								blue.data[0] = 0;
+								blue.data[1] = 0;
+								blue.data[2] = 255;
+								blue.data[3] = 255;
+								rctx.putImageData(blue, Math.round(this.newX), Math.round(this.newY));
+							}*/
+						}
+						if(!finished) {
+							this.pixel = new ImageData(new Uint8ClampedArray(4), 1, 1)
+							result.unshift(new Point2D(this.newX, this.newY, this.pixel, this.angle));
+						}
+						return result;
+					})();
+					return point;
+				}
+			}
+					
+			function castRays() {
+				//Number of rays to be cast
+				projHeight = canvas.height / camera.resolution;
+				
+				//Set up the main canvas
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				//ctx.imageSmoothingEnabled = false;
+				
+				//Set up the ray canvas
+				//rctx.imageSmoothingEnabled = false;
+				rcanvas.width = imgcanvas.width;
+				rcanvas.height = imgcanvas.height;
+				let imgData = imgctx.getImageData(0, 0, imgcanvas.width, imgcanvas.height);
+				rctx.drawImage(createOffscreenCanvas(imgData), 0, 0);
+				
+				//Draw player
+				if(!camera.flipped)
+					rctx.drawImage(createOffscreenCanvas(sctx.getImageData(0, 0, scanvas.width / 2, scanvas.height)), player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+				else
+					rctx.drawImage(createOffscreenCanvas(sctx.getImageData(scanvas.width / 2, 0, scanvas.width / 2, scanvas.height)), player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+				
+				//Get data from the ray canvas to be used by the rays
+				imgData = rctx.getImageData(0, 0, rcanvas.width, rcanvas.height);
+				
+				//Cast rays
+				let offset = Math.round(camera.angle * Math.pow(10, 5)) / Math.pow(10, 5);
+				let angle, ray, point, z, pointWidth;
+				for(var a = 0; a < projHeight; a++) {
+					//Reset variables
+					points1D.length = 0;
+					
+					//Calculate the angle to cast the ray at
+					angle = a * (camera.fov / projHeight) - (camera.fov / 2) - offset;
+					if(camera.flipped)
+						angle = Math.PI - angle;
+						
+					//Cast the ray
+					ray = new Ray(camera.x, camera.y, angle, imgData);
+					points2D = ray.cast();
+					//points2D.push(point);
+					
+					//Calculate the width of each point and then draw them
+					for(var b = 0; b < points2D.length; b++) {
+						//angle += offset;
+						angle = (a - projHeight / 2) * camera.fov / projHeight;
+						//console.log(angle * 180 / Math.PI, (Math.PI - Math.atan2(points2D[b].y - camera.y, points2D[b].x - camera.x)) * 180 / Math.PI);
+						//angle = Math.atan2(points2D[b].y - camera.y, points2D[b].x - camera.x);
+						//angle = angle - (Math.floor(angle / (2 * Math.PI)) * (2 * Math.PI));
+						//points2D[b].x = Math.round(points2D[b].x);
+						//points2D[b].y = Math.round(points2D[b].y);
+						
+						/*angle = camera.flipped 
+						? (Math.PI - Math.atan2(points2D[b].y - camera.y, points2D[b].x - camera.x)) - (Math.PI - camera.angle)
+						: (Math.PI - Math.atan2(points2D[b].y - camera.y, points2D[b].x - camera.x)) - camera.angle;*/
+						
+						let dist = Math.hypot(points2D[b].x - camera.x, points2D[b].y - camera.y);
+						
+						//console.log(Math.floor(points2D[0].x * 1000) / 1000, Math.floor(points2D[0].y * 1000) / 1000);
+						
+						z = dist * Math.cos(angle);
+						//z = Math.hypot(points2D[b].x - camera.x, points2D[b].y - camera.y) * Math.cos(angle);
+						//console.log(z);
+						//console.log((angle - camera.angle) * 180 / Math.PI);
+						//z = Math.abs(camera.x - points2D[b].x);
+						pointWidth = Math.abs((player.height - player.cy) * maxWidth / z);
+						//console.log(pointWidth);
+						points1D.push(new Point1D(points2D[b].to1D(), pointWidth, points2D[b].pixel));
+						//Draw the point
+						points1D[b].draw(canvas, a);
+					}
+				}
+				
+				//Draw the background and the player on canvas2
+				if(player.peeking) {
+					canvas2.style.display = "block";
+					ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+					canvas2.width = rcanvas.width;
+					canvas2.height = rcanvas.height;
+					ctx2.putImageData(rctx.getImageData(0, 0, rcanvas.width, rcanvas.height), 0, 0);
+				} else {
+					canvas2.style.display = "none";
+					ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+				}
+			}
+			
+			//Creates an offscreen canvas given image data for use with the drawImage function
+			function createOffscreenCanvas(imgData) {
+				let canvas = document.createElement('canvas');
+				let ctx = canvas.getContext('2d');
+				canvas.width = imgData.width;
+				canvas.height = imgData.height;
+				ctx.putImageData(imgData, 0, 0);
+				return canvas;
+			}
+			
+			//Function to get the pixel data of a pixel in an ImageData object at the specified x and y positions
+			function getPixel(data, x, y) {
+				let index = x * 4 + y * 4 * data.width;
+				return {index: index, pixel: [data.data[index], data.data[index + 1], data.data[index + 2], data.data[index + 3]]};
+			}
+			
+			//Function to get the x and y coordinates of a pixel in an ImageData object at the specified index
+			function getCoords(data, index) {
+				let y = Math.floor(index / (data.width * 4));
+				let x = (index / 4)- (y * data.width);
+				return {x: x, y: y}
+			}
+			
+			//Uses alpha compositing to mix colors
+			function mixColors(base, added) {
+				let baseAlpha = base[3] / 255;
+				let addedAlpha = added[3] / 255;
+				let mix = [], comp = new Uint8ClampedArray(4);
+				mix[3] = addedAlpha + baseAlpha * (1 - addedAlpha);
+				for(var a = 0; a < 3; a++)
+					mix[a] = mix[3] === 0 ? 0 : (added[a] * addedAlpha + base[a] * baseAlpha * (1 - addedAlpha)) / mix[3];
+				mix[3] *= 255;
+				for(var a = 0; a < 4; a++)
+					comp[a] = mix[a];
+				return comp;
+			}
+			
+			if(!Array.prototype.last) {
+				Array.prototype.last = function() {
+					return this[this.length - 1];
+				}
+			}
+			
+			player.checkCollision = function() {
+				this.col = {top: false, front: false, bottom: false, back: false};
+				
+				function check(area) {
+					return (() => {
+						for(var a = 0; a < area.data.length; a += 4) {
+							if(area.data[a + 3] !== 0) {
+								let coords = getCoords(area, a);
+								return {col: true, x: coords.x, y: coords.y};
+							}
+						}
+						return {col: false, x: null, y: null};
+					})();
+				}
+				
+				let area1 = imgctx.getImageData(this.x - (this.width / 2), this.y - (this.height / 2) - 1, this.width, 1 + player.height / 2);
+				this.col.top = check(area1);
+				
+				//let area2 = imgctx.getImageData(this.x + (this.width / 2), this.y - (this.height / 2), 1, this.height);
+				let area2 = imgctx.getImageData(this.x, this.y - (this.height / 2), player.width / 2 + 1, this.height);
+				this.col.front = check(area2);
+				
+				//let area3 = imgctx.getImageData(this.x - (this.width / 2), this.y + (this.height / 2), this.width, 1);
+				let area3 = imgctx.getImageData(this.x - (this.width / 2), this.y, this.width, player.height / 2 + 1);
+				this.col.bottom = check(area3);
+				
+				let area4 = imgctx.getImageData(this.x - (this.width / 2) - 1, this.y - (this.height / 2), player.width / 2 + 1, this.height);
+				this.col.back = check(area4);
+			}
+			
+			player.update = function() {
+				
+				if(keyState[80] && !this.peeking) {
+					this.peeking = true;
+					keyState[80] = false;
+				} else if(keyState[80]) {
+					this.peeking = false;
+					keyState[80] = false;
+				}
+				
+				//Coefficient to switch forward and backward movement if the camera view is flipped
+				let coef = 1;
+				if(camera.flipped)
+					coef = -1;
+				
+				//Adjust player x velocity
+				if(keyState[87] && !this.peeking)
+					this.Vx += 0.2 * coef;
+				if(keyState[83] && !this.peeking)
+					this.Vx -= 0.2 * coef;
+					
+				if(!this.col.bottom.col)
+					this.Vy += 0.1;
+				else {
+					this.Vy = 0;
+					if(this.col.bottom.y < this.height / 2)
+						this.y -= ((this.height / 2) + 1 - this.col.bottom.y) + 1;
+					if(keyState[32] && !this.peeking)
+						this.Vy -= 3;
+				}
+				if(this.col.top.col) {
+					this.Vy = 0;
+					if(!this.col.bottom.col)
+						this.y += 1;
+				}
+				
+				if(this.col.front.col) {
+					this.Vx = 0;
+					this.x -= 1;
+				}
+				if(this.col.back.col) {
+					this.Vx = 0;
+					this.x += 1;
+				}
+				
+				this.Vx *= 0.9;
+				this.x += Math.round(this.Vx);
+				this.y += Math.round(this.Vy);
+			}
+			
+			camera.update = (e) => {
+				if(locked) {
+					camera.angle += -e.movementY * (Math.PI / 180) * 0.1;
+					if(Math.abs(e.movementX) > 100 && Math.abs(camera.lastX) < 10) {
+						camera.flipped = camera.flipped ? false : true;
+						camera.lastX = e.movementX;
+					}
+					if(Math.abs(e.movementX) < 10) {
+						camera.lastX = e.movementX;
+					}
+				}
+				if(camera.angle > camera.maxoffset)
+					camera.angle = camera.maxoffset;
+				if(camera.angle < camera.minoffset)
+					camera.angle = camera.minoffset;
+			}
+			
+			bckgImg.addEventListener("load", bckgInit, false);
+			
+			player.skin.addEventListener("load", skinInit, false);
+			
+			window.addEventListener("resize", setScreenDimensions, false);
+			
+			window.addEventListener("keydown", function(e) {
+				keyState[e.keyCode || e.which] = true;
+			}, true);
+  
+			window.addEventListener("keyup", function(e) {
+				keyState[e.keyCode || e.which] = false;
+			}, true);
+		</script>
+	</body>
+</html>
