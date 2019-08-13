@@ -342,6 +342,15 @@
 				
 				fileReader.readAsText(networkInput.files[0]);
 			});
+			
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState === 4 && this.status === 200) {
+					network.useJSONData(xhttp.responseText);
+				}
+			};
+			xhttp.open("GET", "https://ciherrera20.github.io/saves/NetworkSv02.json", true);
+			xhttp.send();
 		</script>
 	</body>
 </html>
