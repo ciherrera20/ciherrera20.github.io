@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Neural Network</title>
+		<script src="../scripts/NeuralNetwork2.js"></script>
+		<script src="../scripts/BitArray.js"></script>
+	</head>
+	
+	<body>
+		<label for="imageInput" class="button input_label">Add Images
+			<input id="imageInput" class="input" type="file"></input>
+		</label>
+		<label for="labelInput" class="button input_label">Add Labels
+			<input id="labelInput" class="input" type="file"></input>
+		</label>
+		<label for="networkInput" class="button input_label">Use Network
+			<input id="networkInput" class="input" type="file"></input>
+		</label>
+		<br>
+		<canvas id="canvas" width="280" height="280"></canvas>
+		<br>
+		<input id="recognize" class="button" type="button" value="Recognize"></input>
+		<span id="output"></span>
+		<br>
+		<input id="backpropagate" class="button" type="button" value="Backpropagate"></input>
+		<input id="download" class="button" type="button" value="Save Network"></input>
+		<input id="clear" class="button" type="button" value="Clear Canvas"></input>
+		<style>
+			.input_label
+			{
+				min-width: 280px;
+				max-width: 280px;
+				height: 40px;
+				margin-bottom: 5px;
+			}
+		
+			#canvas
+			{
+				background: black;
+				border: 10px solid #c8c9ba;
+			}
+			
+			#recognize
+			{
+				min-width: 235px;
+				max-width: 235px;
+				height: 60px;
+				vertical-align: top;
+			}
+			
+			#output
+			{
+				display: inline-block;
+				min-width: 40px;
+				max-width: 40px;
+				height: 40px;
+				border: 10px solid #c8c9ba;
+				text-align: center; 
+				font-family: Courier;
+				font-size: 24pt;
+				margin-left: 1px;
+			}
+			
+			#backpropagate, #download, #clear {
+				min-width: 300px;
+				max-width: 300px;
+				height: 60px;
+				vertical-align: top;
+			}
+			
+			.input
+			{
+				display: none;
+			}
+			
+			.button
+			{
+				display: inline-block;
+				border: 10px solid #c8c9ba;
+				background: #ffffff;
+				text-align: center;
+				font-family: Courier;
+				font-size: 24pt;
+				outline: none;
+				-webkit-transition: .2s;
+				transition: background .2s;
+				margin-bottom: 5px;
+			}
+			
+			.button:hover
+			{
+				background: #f2f2f2;
+			}
+			
+			.button:clicked
+			{
+				background: #aaaaaa;
+			}
+		</style>
+		
+		<script>
+			var imageInput = document.getElementById("imageInput");
+			var labelInput = document.getElementById("labelInput");
+			var networkInput = document.getElementById("networkInput");
+			var canvas = document.getElementById("canvas");
+			var ctx = canvas.getContext("2d");
+			var recognizeButton = document.getElementById("recognize");
+			var output = document.getElementById("output");
+			var backpropagateButton = document.getElementById("backpropagate");
+			var downloadButton = document.getElementById("download");
+			var clearButton = document.getElementById("clear");
+			var outputs = [];
+			var keyState = [];
+			var mouse = {raw_x: 0, raw_y: 0, canvas_x: 0, canvas_y: 0, outside_x: 0, outside_y: 0, down: false, onCanvas: false};
+			var rawValues = [];
+			var labels = [];
+			var currentImage = 0;
+			var activations = (function() {
+				var list = new Array(784);
+				for (var i = 0; i < list.length; i++)
+					list[i] = 0;
+				return list;
+			})();
+			var drawingKernel = [[0.05, 0.1, 0.05], [0.1, 0.2, 0.1], [0.05, 0.1, 0.05]];
+			var network = new Network(4, [784, 16, 16, 10]);
+			
+			recognizeButton.onclick = recognize;
+			backpropagateButton.onclick = backpropagate;
+			downloadButton.onclick = downloadNetworkData;
+			clearButton.onclick = clearCanvas;
+			
+			function recognize() {
+				network.setInputs(activations);
+				network.compute();
+				outputs = network.getOutputs();
+				var largest = 0;
+				for (var i = 1; i < outputs.length; i++) {
+					largest = outputs[i] > outputs[largest] ? i : largest;
+					//outputs[i] = Math.round(outputs[i] * 100) / 100;
+				}
+				output.innerHTML = largest;
+				//console.log(JSON.stringify(outputs));
+				network.setDesiredOutputs(getIdealOutputs(currentImage));
+				console.log(largest, getImageLabel(currentImage), network.computeCost(), currentImage);
+				
+				return largest;
+			}
+			
+			function backpropagate() {
+				network.adjustWeightsAndBiases();
+			}
+			
+			function downloadNetworkData() {
+				let blob = new Blob([network.getJSON()], {type: "application/json"});
+				let url = window.URL.createObjectURL(blob);
+				let a = document.createElement("a");
+				a.href = url;
+				a.download = name;
+				a.click();
+				window.URL.revokeObjectURL(url);
+			}
+			
+			function clearCanvas() {
+				activations.forEach(function(a, i) {
+					activations[i] = 0;
+				});
+			}
+			
+			function activatePixel(x, y, activation) 
+			{
+				ctx.clearRect(x * 10, y * 10, 10, 10);
+				
+				ctx.fillStyle = "white";
+				ctx.globalAlpha = activation;
+				ctx.fillRect(x * 10, y * 10, 10, 10);
+				
+				ctx.globalAlpha = 1;
+			}
+			
+			function setPixelActivation(x, y, activation) {
+				if (x < 0 || y < 0 || x >= 28 || y >= 28)
+					return;
+					
+				if (activation > 1)
+					activation = 1;
+				if (activation < 0)
+					activation = 0;
+					
+				activations[y * 28 + x] = activation;
+			}
+			
+			function getPixelActivation(x, y) {
+				if (x < 0 || y < 0 || x >= 28 || y >= 28)
+					return;
+					
+				return activations[y * 28 + x];
+			}
+			
+			function draw()
+			{
+				if (mouse.onCanvas && mouse.down) {
+					console.log("drawing stuff");
+					for (var i = 0; i < drawingKernel.length; i++) {
+						for (var j = 0; j < drawingKernel[i].length; j++) {
+							let x = mouse.canvas_x + i - 1;
+							let y = mouse.canvas_y + j - 1;
+							let currActiv = getPixelActivation(x, y);
+							
+							setPixelActivation(x, y, drawingKernel[i][j] + currActiv);
+						}
+					}
+				}
+			
+				for (var i = 0; i < 28; i++) {
+					for(var j = 0; j < 28; j++)
+					 activatePixel(j, i, activations[j + (i * 28)]);
+				}
+				
+				window.requestAnimationFrame(draw);
+			}
+			window.requestAnimationFrame(draw);
+			
+			function getMousePos(canvas, e)
+			{
+				var rect = canvas.getBoundingClientRect();
+				return {x: e.clientX - rect.left, y: e.clientY - rect.top};
+			}
+			
+			function setImage(index)
+			{
+				currentImage = index;
+			
+				let start = index * 28 * 28;
+				for (var i = 0; i < 28 * 28; i++) {
+					activations[i] = uint8Array[16 + start + i] / 255;
+				}
+				return getImageLabel(index);
+			}
+			
+			function getImageLabel(index) {
+				return labels[index];
+			}
+			
+			function getIdealOutputs(index) {
+				let idealOutputs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+				idealOutputs[getImageLabel(index)] = 1;
+				return idealOutputs;
+			}
+			
+			function padStr(str, len) {
+				let newStr = str;
+				while (newStr.length < len) {
+					newStr = "0" + newStr;
+				}
+				return newStr;
+			}
+			
+			canvas.addEventListener('mousemove', function(e)
+			{
+				var mousePos = getMousePos(canvas, e);
+				mouse.raw_x = mousePos.x;
+				mouse.raw_y = mousePos.y;
+				mouse.canvas_x = Math.floor((mousePos.x - 10) / 10);
+				mouse.canvas_y = Math.floor((mousePos.y - 10) / 10);
+				mouse.outside_x = e.clientX;
+				mouse.outside_y = e.clientY;
+			}, false);
+			
+			canvas.addEventListener('mousedown', function(e)
+			{
+				mouse.down = true;
+			}, false);
+			
+			canvas.addEventListener('mouseup', function(e)
+			{
+				mouse.down = false;
+			}, false);
+			
+			canvas.addEventListener('mouseenter', function(e)
+			{
+				mouse.onCanvas = true;
+			}, false);
+			
+			canvas.addEventListener('mouseout', function(e)
+			{
+				mouse.onCanvas = false;
+			}, false);
+			
+			window.addEventListener('keydown', function(e)
+			{
+				keyState[e.keyCode || e.which] = true;
+			}, true);
+  
+			window.addEventListener('keyup', function(e)
+			{
+				keyState[e.keyCode || e.which] = false;
+			}, true);
+			
+			var uint8Array;
+			
+			imageInput.addEventListener('change', function(e) {
+				var fileReader = new FileReader();
+				
+				fileReader.onload = function() {
+					uint8Array = new Uint8Array(fileReader.result);
+					
+					var numImgs = Number("0b" + 
+						padStr(uint8Array[4].toString(2), 8) + 
+						padStr(uint8Array[5].toString(2), 8) + 
+						padStr(uint8Array[6].toString(2), 8) + 
+						padStr(uint8Array[7].toString(2), 8)
+					);
+					
+					console.log(numImgs);
+				};
+				
+				fileReader.readAsArrayBuffer(imageInput.files[0]);
+			});
+			
+			labelInput.addEventListener('change', function(e) {
+				var fileReader = new FileReader();
+				
+				fileReader.onload = function() {
+					var int8Array = new Int8Array(fileReader.result);
+					for (var i = 8; i < int8Array.length; i++)
+						labels.push(int8Array[i]);
+
+					console.log(int8Array.length);
+				};
+				
+				fileReader.readAsArrayBuffer(labelInput.files[0]);
+			});
+			
+			networkInput.addEventListener('change', function(e) {
+				var fileReader = new FileReader();
+				
+				fileReader.onload = function() {
+					network.useJSONData(fileReader.result);
+					
+					console.log("Network loaded");
+				}
+				
+				fileReader.readAsText(networkInput.files[0]);
+			});
+		</script>
+	</body>
+</html>
