@@ -12,6 +12,33 @@ function dActivFunc(x, h) {
 	return (activFunc(x + h) - activFunc(x)) / h;
 }
 
+function randomIterator(length) {
+	let arr = [];
+	for (var i = 0; i < length; i++) {
+		arr.push(i);
+    }
+
+	let newArr = [];
+	while (arr.length > 0) {
+		let i = Math.round((arr.length - 1) * Math.random());
+		newArr.push(arr[i]);
+		arr.splice(i, 1);
+    }
+
+	let currIndex = 0;
+
+	this.next = function() {
+		if (currIndex >= length)
+			currIndex = 0;
+
+		currIndex++;
+
+		return newArr[currIndex];
+    }
+
+	Object.defineProperty(this, "index", {get(){return currIndex}});
+}
+
 // Picks a random number between two values with a precision equal to the precision of the least precise value. Accepts strings
 function pickRandom(first, last) {
 	var findPrecision = function(num) {
