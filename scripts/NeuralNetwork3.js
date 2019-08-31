@@ -250,8 +250,8 @@ if (!console.blog)
 					// If so, make a copy of the given weight matrix and store it as the layer's weights
 					weights = copy(args[4]);
 				} else {
-					// Otherwise, generate random weights
-					weights = randomWeights();
+					// Otherwise, throw an error
+					throw new Error("Improperly formatted weight matrix");
 				}
 			} else {
 				// If no weight matrix is given, generate random weights
@@ -265,8 +265,8 @@ if (!console.blog)
 					// If so, make a copy of the given bias matrix and store it as the layer's biases
 					biases = copy(args[5]);
 				} else {
-					// Otherwise, generate random biases
-					biases = randomBiases();
+					// Otherwise, throw an error
+					throw new Error("Improperly formatted bias matrix");
 				}
 			} else {
 				// If no bias matrix is given, generate biases initialized to 0
@@ -337,10 +337,10 @@ if (!console.blog)
 			let outputRows = Math.ceil(imgRows / winStride);
 			let outputColumns = Math.ceil(imgColumns / winStride);
 			
-			Object.defineProperty(that, "winSize", {get(){winSize}});
-			Object.defineProperty(that, "winStride", {get(){winStride}});
 			Object.defineProperty(that, "numImgs", {get(){numImgs}});
 			Object.defineProperty(that, "imgRows", {get(){imgRows}});
+			Object.defineProperty(that, "winSize", {get(){winSize}});
+			Object.defineProperty(that, "winStride", {get(){winStride}});
 			Object.defineProperty(that, "imgColumns", {get(){imgColumns}});
 			Object.defineProperty(that, "outputRows", {get(){outputRows}});
 			Object.defineProperty(that, "outputColumns", {get(){outputColumns}});
@@ -375,16 +375,60 @@ if (!console.blog)
 			let kernelRows = args[3];
 			let kernelColumns = args[4];
 			let numKernelRows = args[5];
-			let kernels = [];
+			let kernels;
 			
-			function randomKernels() {
+			Object.defineProperty(that, "numImgs", {get(){numImgs}});
+			Object.defineProperty(that, "imgRows", {get(){imgRows}});
+			Object.defineProperty(that, "imgColumns", {get(){imgColumns}});
+			Object.defineProperty(that, "kernelRows", {get(){kernelRows}});
+			Object.defineProperty(that, "kernelColumns", {get(){kernelColumns}});
+			Object.defineProperty(that, "numKernelRows", {get(){numKernelRows}});
+			Object.defineProperty(that, "kernels", {get(){kernels}});
+			
+			function validateKernels(kernels) {
+				if (kernels.rows !== numKernelRows || kernels.columns !== numImgs) {
+					return false;
+				}
+				
 				for (var i = 0; i < numKernelRows; i++) {
-					let kernelRow = [];
 					for (var j = 0; j < numImgs; j++) {
-						let bound = Math.sqrt(6 / ((numKernelRows + numImgs) + Math.pow(5, 2)));
-						kernelRow.push(new Matrix(kernelRows, kernelColumns, getUDGen(-bound, bound)));
+						let kernel = kernels.data[i][j];
+						if (kernel.rows !== kernelRows || kernel.columns !== kernelColumns) {
+							return false;
+						}
 					}
 				}
+				
+				return true;
+			}
+			
+			function copyKernels(data) {
+				kernels = new Matrix(numKernels, numImgs);
+				data.forEach(function(row, i) {
+					row.forEach(function(kernel, j) {
+						kernels.data[i][j] = copy(kernel);
+					});
+				});
+			}
+			
+			function randomKernels() {
+				kernels = new Matrix(numKernelRows, numImgs);
+				for (var i = 0; i < numKernelRows; i++) {
+					for (var j = 0; j < numImgs; j++) {
+						let bound = Math.sqrt(6 / ((numKernelRows + numImgs) + Math.pow(5, 2)));
+						kernels.data[i][j] = new Matrix(kernelRows, kernelColumns, getUDGen(-bound, bound));
+					}
+				}
+			}
+			
+			if (args[6]) {
+				if (validateKernels(args[6])) {
+					kernels = copyKernels(args[6]);
+				} else {
+					throw new Error("Improperly formatted kernel matrices");
+				}
+			} else {
+				kernels = randomKernels();
 			}
 		}
 		

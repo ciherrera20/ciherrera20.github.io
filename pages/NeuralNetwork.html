@@ -358,7 +358,7 @@
 					let rows = weightArray.length / columns;
 					
 					let weightMatrix = new Matrix(rows, columns, weightArray);
-					let biasMatrix = new Matrix(columns, 1, data.biasMatrices[i]);
+					let biasMatrix = new Matrix(rows, 1, data.biasMatrices[i]);
 					
 					let layer = new Layer("fully_connected", columns, rows, activFunc, undefined, weightMatrix, biasMatrix);
 					layers.push(layer);
