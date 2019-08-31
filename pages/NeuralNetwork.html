@@ -2,7 +2,8 @@
 <html>
 	<head>
 		<title>Neural Network</title>
-		<script src="../scripts/NeuralNetwork2.js"></script>
+		<script src="../scripts/Matrix.js"></script>
+		<script src="../scripts/NeuralNetwork3.js"></script>
 		<script src="../scripts/BitArray.js"></script>
 	</head>
 	
@@ -122,7 +123,8 @@
 				return list;
 			})();
 			var drawingKernel = [[0.05, 0.1, 0.05], [0.1, 0.2, 0.1], [0.05, 0.1, 0.05]];
-			var network = new Network(4, [784, 16, 16, 10]);
+			//var network = new Network(4, [784, 16, 16, 10]);
+			var network = new FCNetwork([784, 16, 16, 10], activFunc);
 			
 			recognizeButton.onclick = recognize;
 			backpropagateButton.onclick = backpropagate;
@@ -130,18 +132,21 @@
 			clearButton.onclick = clearCanvas;
 			
 			function recognize() {
-				network.setInputs(activations);
-				network.compute();
-				outputs = network.getOutputs();
+				network.setInput(new Matrix(784, 1, activations));
+				//network.compute();
+				outputs = vectorize(network.output);
 				var largest = 0;
 				for (var i = 1; i < outputs.length; i++) {
 					largest = outputs[i] > outputs[largest] ? i : largest;
 					//outputs[i] = Math.round(outputs[i] * 100) / 100;
 				}
-				output.innerHTML = largest;
+				if (largest === 10)
+					output.innerHTML = "NA"
+				else
+					output.innerHTML = largest;
 				//console.log(JSON.stringify(outputs));
-				network.setDesiredOutputs(getIdealOutputs(currentImage));
-				console.log(largest, getImageLabel(currentImage), network.computeCost(), currentImage);
+				//network.setDesiredOutputs(getIdealOutputs(currentImage));
+				//console.log(largest, getImageLabel(currentImage), network.computeCost(), currentImage);
 				
 				return largest;
 			}
@@ -242,7 +247,7 @@
 			}
 			
 			function getIdealOutputs(index) {
-				let idealOutputs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+				let idealOutputs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 				idealOutputs[getImageLabel(index)] = 1;
 				return idealOutputs;
 			}
@@ -343,10 +348,30 @@
 				fileReader.readAsText(networkInput.files[0]);
 			});
 			
+			function useJSONData(json) {
+				let data = JSON.parse(json);
+				let numLayers = data.weightMatrices.length;
+				let layers = [];
+				
+				data.weightMatrices.forEach(function(weightArray, i) {
+					let columns = data.weightData[i];
+					let rows = weightArray.length / columns;
+					
+					let weightMatrix = new Matrix(rows, columns, weightArray);
+					let biasMatrix = new Matrix(columns, 1, data.biasMatrices[i]);
+					
+					let layer = new Layer("fully_connected", columns, rows, activFunc, undefined, weightMatrix, biasMatrix);
+					layers.push(layer);
+				});
+				
+				network = new FCNetwork(layers);
+			}
+			
 			var xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function() {
 				if (this.readyState === 4 && this.status === 200) {
-					network.useJSONData(xhttp.responseText);
+					//network.useJSONData(xhttp.responseText);
+					useJSONData(xhttp.responseText);
 				}
 			};
 			xhttp.open("GET", "https://ciherrera20.github.io/saves/NetworkSv02.json", true);

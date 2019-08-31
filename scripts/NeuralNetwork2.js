@@ -28,15 +28,16 @@ function randomIterator(length) {
 	let currIndex = 0;
 
 	this.next = function() {
+		currIndex++;
+		
 		if (currIndex >= length)
 			currIndex = 0;
-
-		currIndex++;
 
 		return newArr[currIndex];
     }
 
 	Object.defineProperty(this, "index", {get(){return currIndex}});
+	Object.defineProperty(this, "shuffledArray", {get(){return newArr}});
 }
 
 // Picks a random number between two values with a precision equal to the precision of the least precise value. Accepts strings
@@ -53,6 +54,13 @@ function pickRandom(first, last) {
 	last = Number(last);
 	
 	return (Math.round(Math.random() * ((last * Math.pow(10, exp)) - (first * Math.pow(10, exp)))) + (first * Math.pow(10, exp))) / Math.pow(10, exp);
+}
+
+function getUDGen(lower, upper) {
+	return function fromUD() {
+		let range = Math.abs(upper - lower);
+		return (range * Math.random()) + lower;
+	};
 }
 
 if (!Array.prototype.last) 
@@ -72,9 +80,10 @@ if (!console.blog)
 }
 
 {
-	var Matrix = function(rows, columns, from) {
+	/*var Matrix = function(rows, columns, from) {
 		let random = (from === "random");
 		let number = (typeof from === "number");
+		let applyFunc = (typeof from === "function");
 		let array;
 		if (from)
 			array = Boolean(from.forEach);
@@ -95,6 +104,8 @@ if (!console.blog)
 				} else if (array) {
 					let elem = from[i * columns + j];
 					row.push(Number(elem));
+				} else if (applyFunc) {
+					row.push(from(i, j));
 				} else {
 					row.push(0);
 				}
@@ -161,6 +172,41 @@ if (!console.blog)
 		return result;
 	}
 	
+	var vectorize = function(A) {
+		let vector = [];
+		
+		A.data.forEach(function(row) {
+			row.forEach(function(column) {
+				vector.push(column);
+			});
+		});
+		
+		return vector;
+	}
+	
+	var copy = function(A) {
+		return new Matrix(A.rows, A.columns, vectorize(A));
+	}*/
+	
+	var networkDist = function(network1, network2) {
+		let sum = 0;
+		network1.weightMatrices.forEach(function(matrix, i) {
+			matrix.data.forEach(function(row, j) {
+				row.forEach(function(weight, k) {
+					sum += Math.pow((weight - network2.weightMatrices[i].data[j][k]), 2);
+				});
+			});
+		});
+		network1.biasMatrices.forEach(function(matrix, i) {
+			matrix.data.forEach(function(row, j) {
+				row.forEach(function(weight, k) {
+					sum += Math.pow((weight - network2.biasMatrices[i].data[j][k]), 2);
+				});
+			});
+		});
+		return Math.sqrt(sum);
+	}
+	
 	var Network = function(numLayers, neuronArray) {
 		let activationMatrices = [];
 		let weightedSumMatrices = [];
@@ -168,8 +214,7 @@ if (!console.blog)
 		let biasMatrices = [];
 		let outputs = [];
 		let desiredOutputs = [];
-		
-		const learningRate = 0.1;
+		let learningRate = 0.1;
 		
 		Object.defineProperty(this, "numLayers", {get(){return numLayers}});
 		Object.defineProperty(this, "neuronArray", {get(){return neuronArray}});
@@ -179,12 +224,14 @@ if (!console.blog)
 		Object.defineProperty(this, "biasMatrices", {get(){return biasMatrices}});
 		Object.defineProperty(this, "outputs", {get(){return outputs}});
 		Object.defineProperty(this, "desiredOutputs", {get(){return desiredOutputs}});
+		Object.defineProperty(this, "learningRate", {get(){return learningRate}, set(num){learningRate = num}});
 		
 		neuronArray.forEach(function(neurons, i) {
 			activationMatrices.push(new Matrix(neurons, 1));
 			if (i >= 1) {
-				weightMatrices.push(new Matrix(neurons, neuronArray[i - 1], "random"));	
-				biasMatrices.push(new Matrix(neurons, 1, "random"));
+				let bound = Math.sqrt(6 / (neurons + neuronArray[i -1]));
+				weightMatrices.push(new Matrix(neurons, neuronArray[i - 1], getUDGen(-bound, bound)));	
+				biasMatrices.push(new Matrix(neurons, 1));
 				weightedSumMatrices.push(new Matrix(neurons, 1));
 			}
 		});
@@ -500,4 +547,220 @@ if (!console.blog)
 			}
 		}
 	}
+	
+	function convolve(kernel, bias, imgMatrix, padding) {
+		let rows = imgMatrix.rows;
+		let columns = imgMatrix.columns;
+		let result;
+		let padOffset = (kernel.rows - 1) / 2;
+		
+		if (!padding) {
+			rows -= kernel.rows - 1;
+			columns -= kernel.columns - 1;
+		}
+		
+		result = new Matrix(rows, columns);
+		
+		imgMatrix.data.forEach(function(row, iY) {
+			if (iY < padOffset || iY >= imgMatrix.rows - padOffset)
+				return;
+			
+			row.forEach(function(pixel, iX) {
+				if (iX < padOffset || iX >= imgMatrix.rows - padOffset)
+					return;
+				
+				let sum = 0;
+				let norm = 0;
+				
+				kernel.data.forEach(function(kRow, kY) {
+					let relY = Math.floor(kY - ((kernel.columns - 1) / 2));
+					let y = iY + relY;
+					kRow.forEach(function (kColumn, kX) {
+						let relX = Math.floor(kX - ((kernel.rows - 1) / 2));
+						let x = iX + relX;
+						
+						if (x < 0 || y < 0 || x >= imgMatrix.columns || y >= imgMatrix.rows)
+							return;
+						
+						sum += kColumn * imgMatrix.data[y][x] + bias;
+						//norm += kColumn;
+					});
+				});
+				
+				//if (norm === 0)
+					result.data[iY - padOffset][iX - padOffset] = sum;
+				//else
+				//	result.data[iY - padOffset][iX - padOffset] = sum / norm;
+			});
+		});
+		
+		return result;
+	}
+	
+	function poolImg(size, stride, imgMatrix) {
+		let rows = Math.ceil(imgMatrix.rows / stride);
+		let columns = Math.ceil(imgMatrix.columns / stride);
+		let result = new Matrix(rows, columns);
+		
+		for (var i = 0; i < rows; i++) {
+			for (var j = 0; j < columns; j++) {
+				//let largest = -Infinity;
+				let sum = 0;
+				let norm = 0;
+				
+				for (var k = 0; k < size; k++) {
+					let y = i * size + k;
+					for (var l = 0; l < size; l++) {
+						let x = j * size + l;
+						
+						if (x >= imgMatrix.columns || y >= imgMatrix.rows)
+							continue;
+						
+						sum += imgMatrix.data[y][x];
+						norm++;
+						//largest = imgMatrix.data[y][x] > largest ? imgMatrix.data[y][x] : largest;
+					}
+				}
+				
+				result.data[i][j] = sum / norm;
+				//result.data[i][j] = largest;
+			}
+		}
+		
+		return result;
+	}
+	
+	function ReLU(x) {
+		return x > 0 ? x : 0;
+	}
+	
+	var LayerData = function(type, ...args) {
+		this.type = type;
+		if (type === "convolution") {
+			this.numFeatures = args[0];
+			this.featureSize = args[1];
+			this.padding = args[2];
+		} else if (type === "rectifier") {
+			this.rectFunc = args[0];
+		} else if (type === "pooling") {
+			this.windowSize = args[0];
+			this.windowStride = args[1];
+		}
+	}
+	
+	/**
+	 * A constructor for a convolutional neural network that feeds into an artificial neural network of fully connected layers
+	 * 
+	 * @param numLayers - The number of layers (not including the layers in the artificial neural network)
+	 * @param layerDataList - An array of LayerData objects
+	 * @param network - The artificial neural network
+	 */
+	 
+	var ConvolutionalNetwork = function(numLayers, layerDataList, ANNLayers, neuronArray) {
+		let input;
+		let layerInputs = [];
+		let layerTypes = [];
+		let layerFunctionList = [];
+		let network = new Network(ANNLayers, neuronArray);
+		
+		Object.defineProperty(this, "input", {get(){return input}});
+		Object.defineProperty(this, "layerInputs", {get(){return layerInputs}});
+		Object.defineProperty(this, "layerTypes", {get(){return layerTypes}});
+		Object.defineProperty(this, "layerFunctionList", {get(){return layerFunctionList}});
+		Object.defineProperty(this, "network", {get(){return network}});
+		
+		let prevFeatures = 1;
+		layerDataList.forEach(function(layer, i) {
+				layerTypes.push(layer.type);
+				if (layer.type === "convolution") {
+					let convLayer = Object.create(null);
+					let features = [];
+					let biases = [];
+					let bound = Math.sqrt(6 / ((layer.numFeatures + prevFeatures) * Math.pow(layer.featureSize, 2)));
+					prevFeatures = layer.numFeatures;
+					convLayer.features = features;
+					convLayer.biases = biases;
+					
+					for (var j = 0; j < layer.numFeatures; j++) {
+						features.push(new Matrix(layer.featureSize, layer.featureSize, getUDGen(-bound, bound)));
+						biases.push(0);
+					}
+					
+					layerFunctionList.push(convLayer);
+				} else if (layer.type === "rectifier") {
+					layerFunctionList.push(layer.rectFunc);
+				} else if (layer.type === "pooling") {
+					let windowData = Object.create(null);
+					
+					windowData.size = layer.windowSize;
+					windowData.stride = layer.windowStride;
+					
+					layerFunctionList.push(windowData);
+				}
+		});
+		
+		function vectorization(imgMatrixList) {
+			let vector = [];
+			imgMatrixList.forEach(function(imgMatrix) {
+				imgMatrix.data.forEach(function(row) {
+					row.forEach(function(pixel) {
+						vector.push(pixel);
+					});
+				});
+			});
+			return vector;
+		}
+		
+		this.setInputImg = function(imgMatrix) {
+			input = imgMatrix;
+		}
+		
+		this.compute = function() {
+			layerInputs = [[input]];
+			
+			layerTypes.forEach(function(type, i) {
+				let nextImgs = [];
+				
+				if (type === "convolution") {
+					layerFunctionList[i].features.forEach(function(feature, j) {
+						let nextImg;
+						layerInputs[i].forEach(function(img, k) {
+							if (!nextImg)
+								nextImg = convolve(feature, layerFunctionList[i].biases[j], img, layerDataList[i].padding);
+							else
+								nextImg = add(nextImg, convolve(feature, 0, img, layerDataList[i].padding));
+						});
+						nextImgs.push(nextImg);
+					});
+				} else if (type === "rectifier") {
+					layerInputs[i].forEach(function(img, j) {
+						nextImgs.push(applyFunc(img, layerFunctionList[i]));
+					});
+				} else if (type === "pooling") {
+					layerInputs[i].forEach(function(img, j) {
+						nextImgs.push(poolImg(layerFunctionList[i].size, layerFunctionList[i].stride, img));
+					});
+				}
+				
+				layerInputs.push(nextImgs);
+			});
+			
+			layerInputs.push(vectorization(layerInputs.last));
+			network.setInputs(layerInputs.last);
+			network.compute();
+		}
+		
+		this.getOutputs = function() {
+			return network.getOutputs();
+		}
+	}
 }
+
+var layerDataList = [];
+layerDataList.push(new LayerData("convolution", 6, 5, false));
+layerDataList.push(new LayerData("rectifier", activFunc));
+layerDataList.push(new LayerData("pooling", 2, 2));
+layerDataList.push(new LayerData("convolution", 12, 5, false));
+layerDataList.push(new LayerData("rectifier", activFunc));
+layerDataList.push(new LayerData("pooling", 2, 2));
+var conNet = new ConvolutionalNetwork(6, layerDataList, 2, [192, 10]);
