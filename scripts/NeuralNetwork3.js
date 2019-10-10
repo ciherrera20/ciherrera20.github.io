@@ -1,3 +1,14 @@
+//TODO Add computeFeedback method to convolution layer
+
+function createObject(prototype, constructor) {
+	let obj = Object.create(prototype);
+	
+	obj.super = prototype;
+	obj.super.constructor = constructor;
+	
+	return obj;
+}
+
 // Function which squishes the number line into a range between 0 and 1
 function activFunc(x) {
 	return 1 / (1 + Math.pow(Math.E, -x));
@@ -143,16 +154,17 @@ if (!console.blog)
 		return result;
 	}
 	
-	var poolImg = function(size, stride, imgMatrix) {
-		let rows = Math.ceil(imgMatrix.rows / stride);
-		let columns = Math.ceil(imgMatrix.columns / stride);
+	/*var poolImg = function(size, imgMatrix, poolFunc) {
+		let rows = Math.ceil(imgMatrix.rows / size);
+		let columns = Math.ceil(imgMatrix.columns / size);
 		let result = new Matrix(rows, columns);
 		
 		for (var i = 0; i < rows; i++) {
 			for (var j = 0; j < columns; j++) {
 				//let largest = -Infinity;
-				let sum = 0;
-				let norm = 0;
+				//let sum = 0;
+				//let norm = 0;
+				let localPool = [];
 				
 				for (var k = 0; k < size; k++) {
 					let y = i * size + k;
@@ -162,19 +174,21 @@ if (!console.blog)
 						if (x >= imgMatrix.columns || y >= imgMatrix.rows)
 							continue;
 						
-						sum += imgMatrix.data[y][x];
-						norm++;
+						localPool.push(imgMatrix.data[y][x]);
+						//sum += imgMatrix.data[y][x];
+						//norm++;
 						//largest = imgMatrix.data[y][x] > largest ? imgMatrix.data[y][x] : largest;
 					}
 				}
 				
-				result.data[i][j] = sum / norm;
+				result.data[i][j] = poolFunc(localPool);
+				//result.data[i][j] = sum / norm;
 				//result.data[i][j] = largest;
 			}
 		}
 		
 		return result;
-	}
+	}*/
 	
 	/*var LayerData = function(type, ...args) {
 		this.type = type;
@@ -190,250 +204,21 @@ if (!console.blog)
 		} else if (type === "")
 	}*/
 	
-	var Layer = function(type, ...args) {
-		let that = this;
-		let input;
-		let output;
-		let compute;
-		let validateInput;
-		
-		Object.defineProperty(that, "type", {get(){return type}});
-		Object.defineProperty(that, "input", {get(){return input}});
-		Object.defineProperty(that, "output", {get(){return output}});
-		Object.defineProperty(that, "compute", {get(){return compute}});
-		Object.defineProperty(that, "validateInput", {get(){return validateInput}});
-		
-		//this.prevLayer = prevLayer;
-		
-		if (type === "fully_connected") {
-			let numInputs = args[0];
-			let numOutputs = args[1];
-			let activFunc = args[2];
-			let dActivFunc;
-			let weightRows = numOutputs;
-			let weightColumns = numInputs;
-			let weights;
-			let biases;
-			let weightedSums;
-			
-			Object.defineProperty(that, "numInputs", {get(){return numInputs}});
-			Object.defineProperty(that, "numOutputs", {get(){return numOutputs}});
-			Object.defineProperty(that, "activFunc", {get(){return activFunc}});
-			Object.defineProperty(that, "dActivFunc", {get(){return dActivFunc}});
-			Object.defineProperty(that, "weights", {get(){return weights}});
-			Object.defineProperty(that, "biases", {get(){return biases}});
-			
-			// Generates random weights
-			function randomWeights() {
-				let bound = Math.sqrt(6 / (numInputs + numOutputs));
-				return new Matrix(weightRows, weightColumns, getUDGen(-bound, bound));
-			}
-			
-			// Generate random biases
-			function randomBiases() {
-				return new Matrix(numOutputs, 1);
-			}
-			
-			// Check if the activation function's derivative is given
-			if (args[3]) {
-				// If so, store it in dActivFunc
-				dActivFunc = args[3];
-			} else {
-				// Otherwise, create a function that performs a numerical derivative at a point
-				dActivFunc = numDeriv(activFunc);
-			}
-			
-			// Check if a weight matrix is given
-			if (args[4]) {
-				// Check if the given weight matrix has the correct dimensions
-				if (args[4].rows === weightRows && args[4].columns === weightColumns) {
-					// If so, make a copy of the given weight matrix and store it as the layer's weights
-					weights = copy(args[4]);
-				} else {
-					// Otherwise, throw an error
-					throw new Error("Improperly formatted weight matrix");
-				}
-			} else {
-				// If no weight matrix is given, generate random weights
-				weights = randomWeights();
-			}
-			
-			// Check if a bias matrix is given
-			if (args[5]) {
-				// Check if the given bias matrix has the correct dimensions
-				if (args[5].rows === numOutputs && args[5].columns === 1) {
-					// If so, make a copy of the given bias matrix and store it as the layer's biases
-					biases = copy(args[5]);
-				} else {
-					// Otherwise, throw an error
-					throw new Error("Improperly formatted bias matrix");
-				}
-			} else {
-				// If no bias matrix is given, generate biases initialized to 0
-				biases = randomBiases();
-			}
-			
-			validateInput = function(data) {
-				if (data.rows !== numInputs || data.columns !== 1) {
-					return false;
-				}
-				
-				return true;
-			}
-			
-			compute = function() {
-				weightedSums = add(multiply(weights, input), biases);
-				output = applyFunc(weightedSums, activFunc);
-			}
-		} else if (type === "vectorization") {
-			let numImgs = args[0];
-			let imgRows = args[1];
-			let imgColumns = args[2];
-			let outputSize = numImgs * imgRows * imgColumns;
-
-			Object.defineProperty(that, "numImgs", {get(){return numImgs}});
-			Object.defineProperty(that, "imgRows", {get(){return imgRows}});
-			Object.defineProperty(that, "imgColumns", {get(){return imgColumns}});
-			Object.defineProperty(that, "outputSize", {get(){return outputSize}});
-			
-			validateInput = function(data) {
-				if (input.length !== numImgs) {
-					return false;
-				}
-				
-				for (var i = 0; i < input.length; i++) {
-					if (input[i].rows !== imgRows || input[i].columns !== imgColumns) {
-						return false;
-					}
-				}
-				
-				return true;
-			}
-			
-			compute = function() {
-				let imgs = [];
-				
-				input.forEach(function(img) {
-					imgs.push(copy(img));
-				});
-				
-				let vector = [];
-				
-				imgs.forEach(function(img) {
-					let newVector = vectorize(img);
-					newVector.forEach(function(num) {
-						vector.push(num);
-					});
-				});
-				
-				output = new Matrix(vector.length, 1, vector);
-			}
-		} else if (type === "pooling") {
-			let numImgs = args[0];
-			let imgRows = args[1];
-			let imgColumns = args[2];
-			let winSize = args[3];
-			let winStride = args[4];
-			let outputRows = Math.ceil(imgRows / winStride);
-			let outputColumns = Math.ceil(imgColumns / winStride);
-			
-			Object.defineProperty(that, "numImgs", {get(){numImgs}});
-			Object.defineProperty(that, "imgRows", {get(){imgRows}});
-			Object.defineProperty(that, "winSize", {get(){winSize}});
-			Object.defineProperty(that, "winStride", {get(){winStride}});
-			Object.defineProperty(that, "imgColumns", {get(){imgColumns}});
-			Object.defineProperty(that, "outputRows", {get(){outputRows}});
-			Object.defineProperty(that, "outputColumns", {get(){outputColumns}});
-			
-			validateInput = function(data) {
-				if (input.length !== numImgs) {
-					return false;
-				}
-				
-				for (var i = 0; i < input.length; i++) {
-					if (input[i].rows !== imgRows || input[i].columns !== imgColumns) {
-						return false;
-					}
-				}
-				
-				return true;
-			}
-			
-			compute = function() {
-				let results = [];
-				
-				input.forEach(function(img) {
-					results.push(poolImg(winSize, winStride, img));
-				});
-				
-				output = result;
-			}
-		} else if (type === "convolution") {
-			let numImgs = args[0];
-			let imgRows = args[1];
-			let imgColumns = args[2];
-			let kernelRows = args[3];
-			let kernelColumns = args[4];
-			let numKernelRows = args[5];
-			let kernels;
-			
-			Object.defineProperty(that, "numImgs", {get(){numImgs}});
-			Object.defineProperty(that, "imgRows", {get(){imgRows}});
-			Object.defineProperty(that, "imgColumns", {get(){imgColumns}});
-			Object.defineProperty(that, "kernelRows", {get(){kernelRows}});
-			Object.defineProperty(that, "kernelColumns", {get(){kernelColumns}});
-			Object.defineProperty(that, "numKernelRows", {get(){numKernelRows}});
-			Object.defineProperty(that, "kernels", {get(){kernels}});
-			
-			function validateKernels(kernels) {
-				if (kernels.rows !== numKernelRows || kernels.columns !== numImgs) {
-					return false;
-				}
-				
-				for (var i = 0; i < numKernelRows; i++) {
-					for (var j = 0; j < numImgs; j++) {
-						let kernel = kernels.data[i][j];
-						if (kernel.rows !== kernelRows || kernel.columns !== kernelColumns) {
-							return false;
-						}
-					}
-				}
-				
-				return true;
-			}
-			
-			function copyKernels(data) {
-				kernels = new Matrix(numKernels, numImgs);
-				data.forEach(function(row, i) {
-					row.forEach(function(kernel, j) {
-						kernels.data[i][j] = copy(kernel);
-					});
-				});
-			}
-			
-			function randomKernels() {
-				kernels = new Matrix(numKernelRows, numImgs);
-				for (var i = 0; i < numKernelRows; i++) {
-					for (var j = 0; j < numImgs; j++) {
-						let bound = Math.sqrt(6 / ((numKernelRows + numImgs) + Math.pow(5, 2)));
-						kernels.data[i][j] = new Matrix(kernelRows, kernelColumns, getUDGen(-bound, bound));
-					}
-				}
-			}
-			
-			if (args[6]) {
-				if (validateKernels(args[6])) {
-					kernels = copyKernels(args[6]);
-				} else {
-					throw new Error("Improperly formatted kernel matrices");
-				}
-			} else {
-				kernels = randomKernels();
-			}
+	var Layer = function() {
+		if (this.constructor === Layer) {
+			return Layer(...arguments);
 		}
 		
-		this.setInput = function(data, compFlag = true) {
-			let valid = validateInput(data);
+		let that = createObject(Object.create(null), Layer);
+		
+		let input;
+		let feedbackInput;
+		
+		Object.defineProperty(that, "input", {get(){return input}});
+		Object.defineProperty(that, "feedbackInput", {get(){return feedbackInput}});
+		
+		that.setInput = function(data, compFlag = true) {
+			let valid = this.validateInput(data);
 			
 			if (!valid) {
 				throw new Error("Invalid input data");
@@ -441,23 +226,606 @@ if (!console.blog)
 			
 			input = data;
 			if (compFlag) {
-				compute(input);
+				this.compute(input);
 			}
 		}
+		
+		that.setFeedbackInput = function(data, compFlag = true) {
+			let valid = this.validateFeedbackInput(data);
+			
+			if (!valid) {
+				throw new Error("Invalid feedback input");
+			}
+			
+			feedbackInput = data;
+			if (compFlag) {
+				this.computeFeedback(feedbackInput);
+			}
+		}
+		
+		return that;
 	}
 	
-	var Network = function(layers) {
-		let that = this;
+	var FullyConnectedLayer = function(numInputs, numOutputs, activFunc, dActivFunc, weights, biases) {
+		if (this.constructor === FullyConnectedLayer) {
+			return FullyConnectedLayer(...arguments);
+		}
+		
+		// let that = Object.create(Layer());
+		// that.super = Object.getPrototypeOf(that);
+		// that.super.constructor = FullyConnectedLayer;
+		let that = createObject(Layer(), FullyConnectedLayer);
+		
+		let weightRows = numOutputs;
+		let weightColumns = numInputs;
+		let weightedSums;
+		let output;
+		let feedbackOutput;
+		
+		Object.defineProperty(that, "numInputs", {get(){return numInputs}});
+		Object.defineProperty(that, "numOutputs", {get(){return numOutputs}});
+		Object.defineProperty(that, "activFunc", {get(){return activFunc}});
+		Object.defineProperty(that, "dActivFunc", {get(){return dActivFunc}});
+		Object.defineProperty(that, "weights", {get(){return weights}});
+		Object.defineProperty(that, "biases", {get(){return biases}});
+		Object.defineProperty(that, "output", {get(){return output}});
+		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
+		
+		// Generates random weights
+		function randomWeights() {
+			let bound = Math.sqrt(6 / (numInputs + numOutputs));
+			return new Matrix(weightRows, weightColumns, getUDGen(-bound, bound));
+		}
+		
+		// Generate random biases
+		function randomBiases() {
+			return new Matrix(numOutputs, 1);
+		}
+		
+		// Check if the activation function's derivative is given
+		if (!dActivFunc) {
+			// If not, create a function that performs a numerical derivative at a point
+			dActivFunc = numDeriv(activFunc);
+		}
+		
+		// Check if a weight matrix is given
+		if (weights) {
+			// Check if the given weight matrix has the correct dimensions
+			if (weights.rows === weightRows && weights.columns === weightColumns) {
+				// If so, make a copy of the given weight matrix and store it as the layer's weights
+				weights = copy(weights);
+			} else {
+				// Otherwise, throw an error
+				throw new Error("Improperly formatted weight matrix");
+			}
+		} else {
+			// If no weight matrix is given, generate random weights
+			weights = randomWeights();
+		}
+		
+		// Check if a bias matrix is given
+		if (biases) {
+			// Check if the given bias matrix has the correct dimensions
+			if (biases.rows === numOutputs && biases.columns === 1) {
+				// If so, make a copy of the given bias matrix and store it as the layer's biases
+				biases = copy(biases);
+			} else {
+				// Otherwise, throw an error
+				throw new Error("Improperly formatted bias matrix");
+			}
+		} else {
+			// If no bias matrix is given, generate biases initialized to 0
+			biases = randomBiases();
+		}
+		
+		that.validateInput = function(data) {			
+			return (data.rows === numInputs && data.columns === 1);
+		}
+		
+		that.validateFeedbackInput = function(data) {
+			return (data.rows === numOutputs && data.columns === 1);
+		}
+		
+		that.compute = function() {
+			let input = this.input;
+			
+			weightedSums = add(multiply(weights, input), biases);
+			output = applyFunc(weightedSums, activFunc);
+		}
+		
+		that.computeFeedback = function() {
+			let feedbackInput = this.feedbackInput;
+			feedbackOutput = new Matrix(numInputs, 1);
+			
+			feedbackOutput.data.forEach(function(row, i) {
+				row[0] = feedbackInput.data.reduce(function(acc, num, j) {
+					return acc + (weights.data[j][i] * dActivFunc(weightedSums.data[j][0]) * feedbackInput.data[j][0]);
+				}, 0);
+			});
+		}
+		
+		that.adjustInternalValues = function(learningRate) {
+			let input = this.input;
+			let feedbackInput = this.feedbackInput;
+			
+			// ith output, jth input
+			weights.data.forEach(function(row, i) {
+				let coef = learningRate * dActivFunc(weightedSums.data[i][0]) * feedbackInput.data[i][0];
+				row.forEach(function(weight, j) {
+					weights.data[i][j] -= coef * input.data[j][0];
+				});
+				biases.data[i][0] -= coef;
+			});
+		}
+		
+		return that;
+	}
+	
+	var VectorizationLayer = function(numImgs, imgRows, imgColumns) {
+		if (this.constructor === VectorizationLayer) {
+			return VectorizationLayer(...arguments);
+		}
+		
+		let that = createObject(Layer(), VectorizationLayer);
+		
+		let outputSize = numImgs * imgRows * imgColumns;
+		let output;
+		let feedbackOutput;
+
+		Object.defineProperty(that, "numImgs", {get(){return numImgs}});
+		Object.defineProperty(that, "imgRows", {get(){return imgRows}});
+		Object.defineProperty(that, "imgColumns", {get(){return imgColumns}});
+		Object.defineProperty(that, "outputSize", {get(){return outputSize}});
+		Object.defineProperty(that, "output", {get(){return output}});
+		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
+		
+		that.validateInput = function(data) {
+			if (data.length !== numImgs) {
+				return false;
+			}
+			
+			return data.every(function(img) {
+				return (img.rows === imgRows && img.columns === imgColumns);
+			});
+		}
+		
+		that.validateFeedbackInput = function(data) {
+			return (data.rows === outputSize && data.columns === 1);
+		}
+		
+		that.compute = function() {
+			let input = this.input;
+			let vector = [];
+			
+			input.forEach(function(img) {
+				let newVector = vectorize(img);
+				newVector.forEach(function(num) {
+					vector.push(num);
+				});
+			});
+			
+			output = new Matrix(vector.length, 1, vector);
+		}
+		
+		that.computeFeedback = function() {
+			let feedback = this.feedbackInput;
+			let imgs = [];
+			let vector = vectorize(feedback);
+			
+			for (var i = 0; i < numImgs; i++) {
+				let vectorSize = imgRows * imgColumns;
+				imgs.push(new Matrix(imgRows, imgColumns, vector.slice(i * vectorSize, (i + 1) * vectorSize)));
+			}
+			
+			feedbackOutput = imgs;
+		}
+	
+		that.adjustInternalValues = function() {
+		}
+	
+		return that;
+	}
+	
+	var PoolingLayer = function(numImgs, imgRows, imgColumns, winSize) {
+		if (this.constructor === PoolingLayer) {
+			return PoolingLayer(...arguments);
+		}
+		
+		let that = createObject(Layer(), PoolingLayer);
+		
+		let outputRows = Math.ceil(imgRows / winSize);
+		let outputColumns = Math.ceil(imgColumns / winSize);
+		let output;
+		
+		Object.defineProperty(that, "numImgs", {get(){return numImgs}});
+		Object.defineProperty(that, "imgRows", {get(){return imgRows}});
+		Object.defineProperty(that, "winSize", {get(){return winSize}});
+		Object.defineProperty(that, "imgColumns", {get(){return imgColumns}});
+		Object.defineProperty(that, "outputRows", {get(){return outputRows}});
+		Object.defineProperty(that, "outputColumns", {get(){return outputColumns}});
+		Object.defineProperty(that, "output", {get(){return output}});
+		
+		that.mapToPool = function(row, column) {
+			let pos = Object.create(null);
+			pos.row = Math.floor(row / winSize);
+			pos.column = Math.floor(column / winSize);
+			return pos;
+		}
+		
+		that.validateInput = function(data) {
+			if (data.length !== numImgs) {
+				return false;
+			}
+			
+			return data.every(function(img) {
+				return (img.rows === imgRows && img.columns === imgColumns);
+			});
+		}
+		
+		that.validateFeedbackInput = function(data) {
+			if (data.length !== numImgs) {
+				return false;
+			}
+			
+			return data.every(function(img) {
+				return (img.rows === outputRows && img.columns === outputColumns);
+			});
+		}
+		
+		that.compute = function() {
+			let input = this.input;
+			let results = [];
+			let that = this;
+			
+			input.forEach(function(img) {
+				let pooledImg = new Matrix(that.outputRows, that.outputColumns);
+				img.data.forEach(function(row, i) {
+					row.forEach(function(pixel, j) {
+						let poolPos = that.mapToPool(i, j);
+						that.addToPool(pixel, poolPos.row, poolPos.column, pooledImg);
+					});
+				});
+				results.push(pooledImg);
+			});
+			
+			output = results;
+		}
+		
+		that.adjustInternalValues = function() {
+		}
+
+		return that;
+	}
+	
+	var MaxPoolingLayer = function(numImgs, imgRows, imgColumns, winSize) {
+		if (this.constructor === MaxPoolingLayer) {
+			return MaxPoolingLayer(...arguments);
+		}
+		
+		let that = createObject(PoolingLayer(...arguments), MaxPoolingLayer);
+		
+		let maxPool = function(pixel, row, column, pooledImg) {
+			let poolPixel = pooledImg.data[row][column];
+			if (pixel > poolPixel) {
+				pooledImg.data[row][column] = pixel;
+			}
+		}
+		let feedbackOutput;
+		
+		that.computeFeedback = function() {
+			let feedbackInput = this.feedbackInput;
+			let pooledImgs = this.output;
+			let imgs = this.input;
+			let feedback = [];
+			
+			imgs.forEach(function(img, i) {
+				let pooledImg = pooledImgs[i];
+				let feedbackImg = new Matrix(imgRows, imgColumns);
+				img.data.forEach(function(row, j) {
+					row.forEach(function(pixel, k) {
+						let poolPos = that.mapToPool(j, k);
+						let pooledPixel = pooledImg.data[poolPos.row][poolPos.column];
+						if (pixel === pooledPixel) {
+							feedbackImg.data[j][k] = feedbackInput[i].data[poolPos.row][poolPos.column];
+						} else {
+							feedbackImg.data[j][k] = 0;
+						}
+					});
+				});
+				feedback.push(feedbackImg);
+			});
+			
+			feedbackOutput = feedback;
+		}
+		
+		Object.defineProperty(that, "addToPool", {get(){return maxPool}});
+		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
+		
+		return that;
+	}
+	
+	var AveragePoolingLayer = function(numImgs, imgRows, imgColumns, winSize) {
+		if (this.constructor === AveragePoolingLayer) {
+			return AveragePoolingLayer(...arguments);
+		}
+		
+		let that = createObject(PoolingLayer(...arguments), AveragePoolingLayer);
+		
+		let avgPool = function(pixel, row, column, pooledImg) {
+			pooledImg.data[row][column] += (pixel / Math.pow(winSize, 2));
+		}
+		let feedbackOutput;
+		
+		that.computeFeedback = function() {
+			let feedbackInput = this.feedbackInput;
+			let pooledImgs = this.output;
+			let imgs = this.input;
+			let feedback = [];
+			
+			imgs.forEach(function(img, i) {
+				let pooledImg = pooledImgs[i];
+				let feedbackImg = new Matrix(imgRows, imgColumns);
+				img.data.forEach(function(row, j) {
+					row.forEach(function(pixel, k) {
+						let poolPos = that.mapToPool(j, k);
+						feedbackImg.data[j][k] = (1 / Math.pow(that.winSize, 2)) * feedbackInput[i].data[poolPos.row][poolPos.column];
+					});
+				});
+				feedback.push(feedbackImg);
+			});
+			
+			feedbackOutput = feedback;
+		}
+		
+		Object.defineProperty(that, "addToPool", {get(){return avgPool}});
+		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
+		
+		return that;
+	}
+	
+	var ConvolutionLayer = function(numImgs, imgRows, imgColumns, numKernelRows, kernelRows, kernelColumns, activFunc, dActivFunc, kernels, biases) {
+		if (this.constructor === ConvolutionLayer) {
+			return ConvolutionLayer(...arguments);
+		}
+		
+		let that = createObject(Layer(), ConvolutionLayer);
+		let output;
+		
+		Object.defineProperty(that, "numImgs", {get(){return numImgs}});
+		Object.defineProperty(that, "imgRows", {get(){return imgRows}});
+		Object.defineProperty(that, "imgColumns", {get(){return imgColumns}});
+		Object.defineProperty(that, "numKernelRows", {get(){return numKernelRows}});
+		Object.defineProperty(that, "kernelRows", {get(){return kernelRows}});
+		Object.defineProperty(that, "kernelColumns", {get(){return kernelColumns}});
+		Object.defineProperty(that, "kernels", {get(){return kernels}});
+		Object.defineProperty(that, "biases", {get(){return biases}});
+		Object.defineProperty(that, "output", {get(){return output}});
+		
+		function validateKernels(kernels) {
+			if (kernels.rows !== numKernelRows || kernels.columns !== numImgs) {
+				return false;
+			}
+			
+			for (var i = 0; i < numKernelRows; i++) {
+				for (var j = 0; j < numImgs; j++) {
+					let kernel = kernels.data[i][j];
+					if (kernel.rows !== kernelRows || kernel.columns !== kernelColumns) {
+						return false;
+					}
+				}
+			}
+			
+			return true;
+		}
+		
+		function copyKernels(data) {
+			let copy = new Matrix(numKernels, numImgs);
+			data.forEach(function(row, i) {
+				row.forEach(function(kernel, j) {
+					kernels.data[i][j] = copy(kernel);
+				});
+			});
+			return copy;
+		}
+		
+		function randomKernels() {
+			let kernels = new Matrix(numKernelRows, numImgs);
+			for (var i = 0; i < numKernelRows; i++) {
+				for (var j = 0; j < numImgs; j++) {
+					let bound = Math.sqrt(6 / ((numKernelRows + numImgs) + Math.pow(5, 2)));
+					kernels.data[i][j] = new Matrix(kernelRows, kernelColumns, getUDGen(-bound, bound));
+				}
+			}
+			return kernels;
+		}
+		
+		function copyBiases(biases) {
+			let copy = [];
+			biases.forEach(function(bias) {
+				copy.push(bias);
+			});
+			return copy;
+		}
+		
+		function randomBiases() {
+			let biases = [];
+			for (var i = 0; i < numImgs; i++) {
+				biases.push(0);
+			}
+			return biases;
+		}
+		
+		// Check if the activation function's derivative is given
+		if (!dActivFunc) {
+			// If not, create a function that performs a numerical derivative at a point
+			dActivFunc = numDeriv(activFunc);
+		}
+		
+		if (kernels) {
+			if (validateKernels(kernels)) {
+				kernels = copyKernels(kernels);
+			} else {
+				throw new Error("Improperly formatted kernel matrices");
+			}
+		} else {
+			kernels = randomKernels();
+		}
+		
+		if (biases) {
+			if (biases.length === numImgs) {
+				biases = copyBiases(biases);
+			} else {
+				throw new Error("Improperly formatted biases");
+			}
+		} else {
+			biases = randomBiases();
+		}
+		
+		that.validateInput = function(data) {
+			if (data.length !== numImgs) {
+				return false;
+			}
+			
+			for (var i = 0; i < data.length; i++) {
+				if (data[i].rows !== imgRows || data[i].columns !== imgColumns) {
+					return false;
+				}
+			}
+			
+			return true;
+		}
+		
+		that.compute = function() {
+			let input = this.input;
+			let results = [];
+			
+			kernels.data.forEach(function(row, i) {
+				let newImg;
+				row.forEach(function(kernel, j) {
+					let convolvedImg = convolve(kernel, biases[j], input[j], false);
+					if (j === 0) {
+						newImg = convolvedImg;
+					} else {
+						add(newImg, convolvedImg, false, true);
+					}
+				});
+				applyFunc(newImg, activFunc, true);
+				results.push(newImg);
+			});
+			
+			output = results;
+		}
+		
+		return that;
+	}
+	
+	var LossFunction = function() {
+		if (this.constructor === LossFunction) {
+			return LossFunction(...arguments);
+		}
+		
+		let that = createObject(Object.create(null), LossFunction);
+		let prediction;
+		let label;
+		
+		Object.defineProperty(that, "prediction", {get(){return prediction}});
+		Object.defineProperty(that, "label", {get(){return label}});
+		
+		that.setInput = function(pData, lData, compFlag) {
+			let pValid = this.validatePrediction(pData);
+			let lValid = this.validateLabel(lData);
+			
+			if (!pValid) {
+				throw new Error("Invalid prediction data");
+			}
+			
+			if (!lValid) {
+				throw new Error("Invalid label data");
+			}
+			
+			prediction = pData;
+			label = lData;
+			
+			if (compFlag) {
+				this.computeLoss();
+			}
+		}
+		
+		return that;
+	}
+	
+	var SquaredErrorLoss = function(numPredictions) {
+		if (this.constructor === SquaredErrorLoss) {
+			return SquaredErrorLoss(...arguments);
+		}
+		
+		let that = createObject(LossFunction(), SquaredErrorLoss);
+		let loss;
+		let feedback;
+		
+		Object.defineProperty(that, "numPredictions", {get(){return numPredictions}});
+		Object.defineProperty(that, "loss", {get(){return loss}});
+		Object.defineProperty(that, "feedback", {get(){return feedback}});
+		
+		that.validatePrediction = function(data) {
+			return (data.rows === numPredictions && data.columns === 1);
+		}
+		
+		that.validateLabel = function(data) {
+			return this.validatePrediction(data);
+		}
+		
+		that.computeLoss = function() {
+			let prediction = this.prediction;
+			let label = this.label;
+			let squaredError = 0;
+			
+			prediction.data.forEach(function(row, i) {
+				squaredError += Math.pow(row[0] - label.data[i][0], 2);
+			});
+			
+			loss = squaredError;
+		}
+		
+		that.computeFeedback = function() {
+			let prediction = this.prediction;
+			let label = this.label;
+			
+			feedback = new Matrix(numPredictions, 1);
+			
+			feedback.data.forEach(function(row, i) {
+				row[0] = 2 * (prediction.data[i][0] - label.data[i][0]);
+			});
+		}
+		
+		return that;
+	}
+	
+	var Network = function(layers, lossFunction) {
+		if (this.constructor === Network) {
+			return Network(...arguments);
+		}
+		
+		let that = createObject(Object.create(null), Network);
 		let input;
 		let output;
+		let label;
+		let loss;
 		let validateInput;
 		let compute;
+		let learningRate = 0.1;
+		let propagateToInput = false;
 		
 		Object.defineProperty(that, "layers", {get(){return layers}});
+		Object.defineProperty(that, "lossFunction", {get(){return lossFunction}});
 		Object.defineProperty(that, "input", {get(){return input}});
 		Object.defineProperty(that, "output", {get(){return output}});
+		Object.defineProperty(that, "label", {get(){return label}});
+		Object.defineProperty(that, "loss", {get(){return loss}});
 		Object.defineProperty(that, "validateInput", {get(){return validateInput}});
 		Object.defineProperty(that, "compute", {get(){return compute}});
+		Object.defineProperty(that, "learningRate", {get(){return learningRate}, set(num){learningRate = num}});
+		Object.defineProperty(that, "propagateToInput", {get(){return propagateToInput}, set(bool){propagateToInput = bool}});
 		
 		validateInput = function(data) {
 			return layers[0].validateInput(data);
@@ -466,13 +834,29 @@ if (!console.blog)
 		compute = function() {
 			let layerInput = input;
 			layers.forEach(function(layer) {
-				layer.setInput(input);
-				input = layer.output;
+				layer.setInput(layerInput);
+				layerInput = layer.output;
 			});
 			output = layers.last.output;
 		}
 		
-		this.setInput = function(data, compFlag = true) {
+		that.backpropagate = function() {
+			lossFunction.computeFeedback();
+			
+			let layerFeedbackInput = lossFunction.feedback;
+			for (var i = layers.length - 1; i >= 0; i--) {
+				let layer = layers[i];
+				if (i === 0 && !propagateToInput) {
+					layer.setFeedbackInput(layerFeedbackInput, false);
+				} else {
+					layer.setFeedbackInput(layerFeedbackInput);
+					layerFeedbackInput = layer.feedbackOutput;
+				}
+				layer.adjustInternalValues(learningRate);
+			}
+		}
+		
+		that.setInput = function(data, compFlag = true) {
 			let valid = validateInput(data);
 			
 			input = data;
@@ -480,30 +864,52 @@ if (!console.blog)
 				compute(input);
 			}
 		}
+		
+		that.setLabel = function(data, compFlag = true) {
+			lossFunction.setInput(output, data, compFlag);
+			
+			label = data;
+			loss = lossFunction.loss;
+		}
+		
+		return that;
 	}
 	
 	var FCNetwork = function(neuronArray, activFunc, dActivFunc) {
-		let that = this;
-		let numInputs = neuronArray[0];
+		if (this.constructor === FCNetwork) {
+			return FCNetwork(...arguments);
+		}
+		
 		let layers = [];
+		let numInputs = neuronArray[0];
+		let lossFunction;
 		
-		Object.defineProperty(that, "numInputs", {get(){return numInputs}});
-		
-		if (typeof neuronArray[0] === "Number") {
+		if (typeof neuronArray[0] === "number") {
 			neuronArray.forEach(function(neurons, i) {
 				if (i === 0) {
 					return;
 				}
 				
-				let layer = new Layer("fully_connected", neuronArray[i - 1], neurons, activFunc, dActivFunc);
+				let layer = new FullyConnectedLayer(neuronArray[i - 1], neurons, activFunc, dActivFunc);
 				
 				layers.push(layer);
 			});
+			lossFunction = new SquaredErrorLoss(neuronArray.last);
 		} else {
 			layers = neuronArray;
+			lossFunction = new SquaredErrorLoss(layers.last.numOutputs);
 		}
 		
-		this.__proto__ = new Network(layers);
+		// let that = Object.create(Network(layers, lossFunction));
+		// that.super = Object.getPrototypeOf(that);
+		// that.super.constructor = FCNetwork;
+		
+		let that = createObject(Network(layers, lossFunction), FCNetwork);
+		
+		Object.defineProperty(that, "neuronArray", {get(){return neuronArray}});
+		Object.defineProperty(that, "numInputs", {get(){return numInputs}});
+		
+		return that;
 	}
 }
 
@@ -513,5 +919,14 @@ layerDataList.push(new LayerData("rectifier", activFunc));
 layerDataList.push(new LayerData("pooling", 2, 2));
 layerDataList.push(new LayerData("convolution", 12, 5, false));
 layerDataList.push(new LayerData("rectifier", activFunc));
-layerDataList.push(new LayerData("pooling", 2, 2));
-var conNet = new ConvolutionalNetwork(6, layerDataList, 2, [192, 10]);*/
+layerDataList.push(new LayerData("pooling", 2, 2));*/
+
+var layers = [];
+layers.push(new ConvolutionLayer(1, 28, 28, 6, 5, 5, activFunc));
+layers.push(new MaxPoolingLayer(6, 24, 24, 2));
+layers.push(new ConvolutionLayer(6, 12, 12, 12, 5, 5, activFunc));
+layers.push(new MaxPoolingLayer(12, 8, 8, 2));
+layers.push(new VectorizationLayer(12, 4, 4));
+layers.push(new FullyConnectedLayer(192, 10, activFunc));
+var lossFunction = new SquaredErrorLoss(10);
+var conNet = new Network(layers, lossFunction);

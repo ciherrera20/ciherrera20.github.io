@@ -454,7 +454,7 @@
 				}
 				
 				//Draw the background and the player on canvas2
-				if(player.peeking) {
+				if(player.peeking || true) {
 					canvas2.style.display = "block";
 					ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
 					canvas2.width = rcanvas.width;

@@ -147,12 +147,15 @@
 				//console.log(JSON.stringify(outputs));
 				//network.setDesiredOutputs(getIdealOutputs(currentImage));
 				//console.log(largest, getImageLabel(currentImage), network.computeCost(), currentImage);
+				network.setLabel(getLabel(currentImage));
+				console.log(largest, getImageLabel(currentImage), network.loss, currentImage);
 				
 				return largest;
 			}
 			
 			function backpropagate() {
-				network.adjustWeightsAndBiases();
+				network.backpropagate();
+				//network.adjustWeightsAndBiases();
 			}
 			
 			function downloadNetworkData() {
@@ -246,10 +249,10 @@
 				return labels[index];
 			}
 			
-			function getIdealOutputs(index) {
-				let idealOutputs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-				idealOutputs[getImageLabel(index)] = 1;
-				return idealOutputs;
+			function getLabel(index) {
+				let label = new Matrix(10, 1, 0);
+				label.data[getImageLabel(index)][0] = 1;
+				return label;
 			}
 			
 			function padStr(str, len) {
@@ -340,7 +343,7 @@
 				var fileReader = new FileReader();
 				
 				fileReader.onload = function() {
-					network.useJSONData(fileReader.result);
+					useJSONData(fileReader.result);
 					
 					console.log("Network loaded");
 				}
@@ -360,14 +363,14 @@
 					let weightMatrix = new Matrix(rows, columns, weightArray);
 					let biasMatrix = new Matrix(rows, 1, data.biasMatrices[i]);
 					
-					let layer = new Layer("fully_connected", columns, rows, activFunc, undefined, weightMatrix, biasMatrix);
+					let layer = new FullyConnectedLayer(columns, rows, activFunc, undefined, weightMatrix, biasMatrix);
 					layers.push(layer);
 				});
 				
 				network = new FCNetwork(layers);
 			}
 			
-			var xhttp = new XMLHttpRequest();
+			/*var xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function() {
 				if (this.readyState === 4 && this.status === 200) {
 					//network.useJSONData(xhttp.responseText);
@@ -375,7 +378,7 @@
 				}
 			};
 			xhttp.open("GET", "https://ciherrera20.github.io/saves/NetworkSv02.json", true);
-			xhttp.send();
+			xhttp.send();*/
 		</script>
 	</body>
 </html>

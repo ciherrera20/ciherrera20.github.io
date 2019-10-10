@@ -10,7 +10,7 @@
 		
 		Object.defineProperty(this, "columns", {get(){return columns}});
 		Object.defineProperty(this, "rows", {get(){return rows}});
-		Object.defineProperty(this, "data", {get(){return data}});
+		//Object.defineProperty(this, "data", {get(){return data}});
 		
 		for (var i = 0; i < rows; i++) {
 			let row = [];
@@ -31,6 +31,8 @@
 			}
 			data.push(row);
 		}
+		
+		this.data = data;
 	}
 	
 	/**
