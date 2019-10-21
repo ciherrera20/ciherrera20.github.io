@@ -148,7 +148,7 @@
 		if (mutate) {
 			A.data.forEach(function(row, i) {
 				row.forEach(function(column, j) {
-					A.data[i][j] = func(column);
+					A.data[i][j] = func(column, i, j);
 				});
 			});
 			
@@ -158,7 +158,7 @@
 			
 			A.data.forEach(function(row, i) {
 				row.forEach(function(column, j) {
-					result.data[i][j] = func(column);
+					result.data[i][j] = func(column, i, j);
 				});
 			});
 			

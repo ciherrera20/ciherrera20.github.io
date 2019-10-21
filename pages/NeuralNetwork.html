@@ -124,7 +124,9 @@
 			})();
 			var drawingKernel = [[0.05, 0.1, 0.05], [0.1, 0.2, 0.1], [0.05, 0.1, 0.05]];
 			//var network = new Network(4, [784, 16, 16, 10]);
-			var network = new FCNetwork([784, 16, 16, 10], activFunc);
+			//var network = new FCNetwork([784, 16, 16, 10], activFunc);
+			var network;
+			//var network = new FCNetwork([784, 16, 16, 10], function(x){return x >= 0 ? x : 0});
 			
 			recognizeButton.onclick = recognize;
 			backpropagateButton.onclick = backpropagate;
@@ -343,7 +345,7 @@
 				var fileReader = new FileReader();
 				
 				fileReader.onload = function() {
-					useJSONData(fileReader.result);
+					network = useJSONData(fileReader.result);
 					
 					console.log("Network loaded");
 				}
@@ -367,18 +369,17 @@
 					layers.push(layer);
 				});
 				
-				network = new FCNetwork(layers);
+				return new FCNetwork(layers);
 			}
 			
-			/*var xhttp = new XMLHttpRequest();
+			var xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function() {
 				if (this.readyState === 4 && this.status === 200) {
-					//network.useJSONData(xhttp.responseText);
-					useJSONData(xhttp.responseText);
+					network = useJSONData(xhttp.responseText);
 				}
 			};
 			xhttp.open("GET", "https://ciherrera20.github.io/saves/NetworkSv02.json", true);
-			xhttp.send();*/
+			xhttp.send();
 		</script>
 	</body>
 </html>
