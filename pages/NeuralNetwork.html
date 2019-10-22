@@ -134,6 +134,7 @@
 			clearButton.onclick = clearCanvas;
 			
 			function recognize() {
+				prepare();
 				network.setInput(new Matrix(784, 1, activations));
 				//network.compute();
 				outputs = vectorize(network.output);
@@ -353,6 +354,133 @@
 				fileReader.readAsText(networkInput.files[0]);
 			});
 			
+			function centerOfMass(image) {
+				var x = 0, y = 0;
+				var totalMass = 0;
+				var centerOfMass = Object.create(null);
+
+				image.data.forEach(function(row, i) {
+					row.forEach(function(pixel, j) {
+						totalMass += pixel;
+						x += (pixel * j);
+						y += (pixel * i);
+					});
+				});
+				
+				centerOfMass.x = x / totalMass;
+				centerOfMass.y = y / totalMass;
+
+				return centerOfMass;
+			}
+
+			function rotateImage(image, angle) {
+				var rotImg = new Matrix(image.rows, image.columns, 0);
+				var cX = (image.columns - 1) / 2;
+				var cY = (image.rows - 1) / 2;
+				var lnum = 1000;
+
+				/*image.data.forEach(function(row, y) {
+					row.forEach(function(pixel, x) {
+						var dist = Math.sqrt(Math.pow(x - cX, 2) + Math.pow(y - cY, 2));
+						var newAngle = Math.atan2(y - cY, x - cX) - angle;
+						var newX = dist * Math.cos(newAngle) + cX;
+						var newY = dist * Math.sin(newAngle) + cY;
+
+						newX = Math.ceil(Math.round(newX * lnum) / lnum);
+						newY = Math.ceil(Math.round(newY * lnum) / lnum);
+
+						//console.log(dist, x, y, cX, cY, newAngle, newX, newY);
+						
+						if (0 <= newX && newX <= image.columns - 1 && 0 <= newY && newY <= image.rows - 1)
+						rotImg.data[newY][newX] = pixel;
+					});
+				});*/
+				
+				rotImg.data.forEach(function(row, y) {
+					row.forEach(function(pixel, x) {
+						var dist = Math.sqrt(Math.pow(x - cX, 2) + Math.pow(y - cY, 2));
+						var newAngle = Math.atan2(y - cY, x - cX) + angle;
+						var newX = dist * Math.cos(newAngle) + cX;
+						var newY = dist * Math.sin(newAngle) + cY;
+						
+						newX = Math.round(newX);
+						newY = Math.round(newY);
+						
+						if (0 <= newX && newX <= image.columns - 1 && 0 <= newY && newY <= image.rows - 1)
+							rotImg.data[y][x] = image.data[newY][newX];
+					});
+				});
+
+				return rotImg;
+			}
+			
+			function getSkew(image) {
+				var thetaRange = Math.PI;
+				var deltaTheta = Math.PI / 20;
+				var n = Math.floor(thetaRange / deltaTheta) + 1;
+				
+				var rValues = [];
+				for (var i = 0; i < n; i++) {
+					rValues.push([]);
+				}
+				
+				function addRValues(row, column) {
+					for (var i = 0; i < n; i++) {
+						let x = column;
+						let y = image.rows - row - 1;
+					
+						let theta = deltaTheta * i;
+						
+						rValues[i].push(x * Math.cos(theta) + y * Math.sin(theta));
+					}
+				}
+				
+				image.data.forEach(function(row, i) {
+					row.forEach(function(pixel, j) {
+						if (pixel !== 0) {
+							addRValues(i, j);
+						}
+					});
+				});
+				
+				var STDEVS = [];
+				rValues.forEach(function(rs, i) {
+					var mean = rs.reduce(function(acc, cur) {
+						return acc + (cur / rs.length);
+					}, 0);
+					
+					var sqrSum = rs.reduce(function(acc, cur) {
+						return acc + Math.pow(cur - mean, 2);
+					}, 0);
+					
+					STDEVS.push(Math.sqrt(sqrSum / (rs.length - 1)));
+				});
+				
+				var leastSpread = STDEVS.reduce(function(acc, cur) {
+					return acc <= cur ? acc : cur;
+				});
+				
+				//console.log(rValues, STDEVS, STDEVS.indexOf(leastSpread));
+				
+				return Math.PI - (STDEVS.indexOf(leastSpread) * deltaTheta);
+			}
+			
+			function deskew(image) {
+				rotateImage(image, getSkew(image));
+			}
+			
+			function blur(image) {
+				return convolve(blur.kernel, 0, image, true);
+			}
+			blur.kernel = new Matrix(3, 3, [1 / 16, 1 / 8, 1 / 16, 1 / 8, 1 / 4, 1 / 8, 1 / 16, 1 / 8, 1 / 16]);
+			
+			function prepare() {
+				var img = new Matrix(28, 28, activations);
+				deskew(img);
+				img = blur(img);
+				activations = vectorize(img);
+			}
+			
 			function useJSONData(json) {
 				let data = JSON.parse(json);
 				let numLayers = data.weightMatrices.length;
@@ -378,7 +506,7 @@
 					network = useJSONData(xhttp.responseText);
 				}
 			};
-			xhttp.open("GET", "https://ciherrera20.github.io/saves/NetworkSv02.json", true);
+			xhttp.open("GET", "https://ciherrera20.github.io/saves/Deskewed_Blurred.json", true);
 			xhttp.send();
 		</script>
 	</body>
