@@ -123,10 +123,13 @@
 				return list;
 			})();
 			var drawingKernel = [[0.05, 0.1, 0.05], [0.1, 0.2, 0.1], [0.05, 0.1, 0.05]];
+			var network;
 			//var network = new Network(4, [784, 16, 16, 10]);
 			//var network = new FCNetwork([784, 16, 16, 10], activFunc);
-			var network;
 			//var network = new FCNetwork([784, 16, 16, 10], function(x){return x >= 0 ? x : 0});
+			//var network = new FCNetwork([784, 200, 10], activFunc);
+			
+			//var autoEncoder = new FCNetwork([784, 16, 16, 10, 16, 16, 784], activFunc);
 			
 			recognizeButton.onclick = recognize;
 			backpropagateButton.onclick = backpropagate;
@@ -646,13 +649,83 @@
 				return new FCNetwork(layers);
 			}
 			
+			function asyncLoop(callback, iterations) {
+				var i = 0;
+				var interval = setInterval(function() {
+					callback(i, iterations);
+				
+					i++;
+					if (i >= iterations) {
+						clearInterval(interval);
+					}
+				}, 0);
+			}
+			
+			function trainFCNetwork(network) {
+				asyncLoop(function(i) {
+					setImage(i);
+					
+					var img = new Matrix(28, 28, activations);
+					img = blur(img);
+					
+					var input = new Matrix(784, 1, vectorize(img));
+					
+					network.setInput(input);
+					network.setLabel(getLabel(currentImage));
+					network.backpropagate();
+					//console.log(network.loss, i);
+				}, 60000);
+			}
+			
+			function trainAutoEncoder(autoEncoder) {
+				var winWidth = 100;
+				var win = [];
+				var head = 0;
+				var windowAvg = 0;
+
+				for (var i = 0; i < 100; i++) {
+					win.push(0);
+				}
+
+				var b = 0.5;
+				var m = (0.01 - b) / 60000;
+				var runningAvg = 0;
+				asyncLoop(function(i) {
+					autoEncoder.learningRate = m * i + b;
+					setImage(i);
+
+					var img = new Matrix(28, 28, activations);
+					img = blur(img);
+					var input = new Matrix(784, 1, vectorize(img));
+
+					autoEncoder.setInput(input);
+					autoEncoder.setLabel(input);
+					autoEncoder.backpropagate();
+
+					var currLoss = autoEncoder.loss;
+					var lastLoss = win[head];
+					win[head] = currLoss;
+
+					windowAvg += currLoss / winWidth;
+					windowAvg -= lastLoss / winWidth;
+					runningAvg = (runningAvg * i + currLoss) / (i + 1);
+
+					//console.log(currLoss, runningAvg, windowAvg, i);
+
+					head++;
+					if (head >= winWidth) {
+						head = 0;
+					}
+				}, 60000);
+			}
+			
 			var xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function() {
 				if (this.readyState === 4 && this.status === 200) {
 					network = useJSONData(xhttp.responseText);
 				}
 			};
-			xhttp.open("GET", "https://ciherrera20.github.io/saves/Blurred.json", true);
+			xhttp.open("GET", "https://ciherrera20.github.io/saves/3Layers_784_200_10.json", true);
 			xhttp.send();
 		</script>
 	</body>

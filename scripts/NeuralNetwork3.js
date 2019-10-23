@@ -925,6 +925,53 @@ if (!console.blog)
 		return that;
 	}
 	
+	var MeanSquaredErrorLoss = function(numPredictions) {
+		if (this.constructor === MeanSquaredErrorLoss) {
+			return MeanSquaredErrorLoss(...arguments);
+		}
+		
+		let that = createObject(LossFunction(), MeanSquaredErrorLoss);
+		let loss;
+		let feedback;
+		
+		Object.defineProperty(that, "numPredictions", {get(){return numPredictions}});
+		Object.defineProperty(that, "loss", {get(){return loss}});
+		Object.defineProperty(that, "feedback", {get(){return feedback}});
+		
+		that.validatePrediction = function(data) {
+			return (data.rows === numPredictions && data.columns === 1);
+		}
+		
+		that.validateLabel = function(data) {
+			return this.validatePrediction(data);
+		}
+		
+		that.computeLoss = function() {
+			let prediction = this.prediction;
+			let label = this.label;
+			let squaredError = 0;
+			
+			prediction.data.forEach(function(row, i) {
+				squaredError += Math.pow(row[0] - label.data[i][0], 2);
+			});
+			
+			loss = squaredError / numPredictions;
+		}
+		
+		that.computeFeedback = function() {
+			let prediction = this.prediction;
+			let label = this.label;
+			
+			feedback = new Matrix(numPredictions, 1);
+			
+			feedback.data.forEach(function(row, i) {
+				row[0] = (2 * (prediction.data[i][0] - label.data[i][0])) / numPredictions;
+			});
+		}
+		
+		return that;
+	}
+	
 	var Network = function(layers, lossFunction) {
 		if (this.constructor === Network) {
 			return Network(...arguments);
@@ -1081,7 +1128,7 @@ layerDataList.push(new LayerData("convolution", 12, 5, false));
 layerDataList.push(new LayerData("rectifier", activFunc));
 layerDataList.push(new LayerData("pooling", 2, 2));*/
 
-var layers = [];
+/*var layers = [];
 layers.push(new ConvolutionLayer(1, 28, 28, 6, 5, 5, activFunc));
 layers.push(new MaxPoolingLayer(6, 24, 24, 2));
 layers.push(new ConvolutionLayer(6, 12, 12, 12, 5, 5, activFunc));
@@ -1089,4 +1136,4 @@ layers.push(new MaxPoolingLayer(12, 8, 8, 2));
 layers.push(new VectorizationLayer(12, 4, 4));
 layers.push(new FullyConnectedLayer(192, 10, activFunc));
 var lossFunction = new SquaredErrorLoss(10);
-var conNet = new Network(layers, lossFunction);
+var conNet = new Network(layers, lossFunction);*/
