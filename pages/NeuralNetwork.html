@@ -209,7 +209,7 @@
 			function draw()
 			{
 				if (mouse.onCanvas && mouse.down) {
-					console.log("drawing stuff");
+					//console.log("drawing stuff");
 					for (var i = 0; i < drawingKernel.length; i++) {
 						for (var j = 0; j < drawingKernel[i].length; j++) {
 							let x = mouse.canvas_x + i - 1;
@@ -276,14 +276,47 @@
 				mouse.outside_y = e.clientY;
 			}, false);
 			
-			canvas.addEventListener('mousedown', function(e)
-			{
+			canvas.addEventListener('mousedown', function(e) {
 				mouse.down = true;
 			}, false);
 			
-			canvas.addEventListener('mouseup', function(e)
-			{
+			canvas.addEventListener('mouseup', function(e) {
 				mouse.down = false;
+				console.log("mouseup");
+			}, false);
+			
+			var touches;
+			
+			canvas.addEventListener('touchstart', function(e) {
+				//mouse.down = true;
+				console.log("touchstart");
+				touches = 0;
+			}, false);
+			
+			canvas.addEventListener('touchend', function(e) {
+				mouse.down = false;
+				console.log(touches);
+				console.log("touchend");
+			}, false);
+			
+			canvas.addEventListener('touchmove', function(e) {	
+				var touch = e.touches[0];
+				var x = touch.pageX;
+				var y = touch.pageY;
+				
+				touches++;
+				mouse.down = true;
+				mouse.onCanvas = true;
+				
+				var mousePos = getMousePos(canvas, {clientX: x, clientY: y});
+				mouse.raw_x = mousePos.x;
+				mouse.raw_y = mousePos.y;
+				mouse.canvas_x = Math.floor((mousePos.x - 10) / 10);
+				mouse.canvas_y = Math.floor((mousePos.y - 10) / 10);
+				mouse.outside_x = x;
+				mouse.outside_y = y;
+				
+				//console.log(touch, x, y);
 			}, false);
 			
 			canvas.addEventListener('mouseenter', function(e)
@@ -454,8 +487,6 @@
 						let theta = deltaTheta * i;
 						let r = x * Math.cos(theta) + y * Math.sin(theta);
 						
-						//console.log(r, theta * 180 / Math.PI, Math.floor((r + rOffset) / deltaR));
-						
 						//accum.data[i][Math.floor((r + rOffset) / deltaR)]++;
 						accum.data[i][Math.floor((r + rOffset) / deltaR)] += image.data[row][column];
 					}
@@ -469,22 +500,82 @@
 					});
 				});
 				
-				var maxRow = 0;
-				var maxCol = 0;
+				function Line(r, theta, freq, row, col) {
+					if (this.constructor === Line) {
+						return Line(...arguments);
+					}
+				
+					let that = createObject(Object.create(null), Line);
+					
+					that.r = r;
+					that.theta = theta;
+					that.slope = -1 / Math.tan(theta);
+					that.freq = freq;
+					that.row = row;
+					that.col = col;
+					
+					return that;
+				}
+				
+				var lines = [];
 				accum.data.forEach(function(binRow, row) {
-					binRow.forEach(function(bin, col) {
-						if (bin >= accum.data[maxRow][maxCol]) {
-							maxRow = row;
-							maxCol = col;
+					binRow.forEach(function(freq, col) {
+						if (freq > 0) {
+							let r = col * deltaR - rOffset;
+							let theta = row * deltaTheta;
+							//console.log(r, theta, freq);
+							lines.push(new Line(r, theta, freq, row, col));
 						}
 					});
 				});
 				
-				console.log(accum);
+				function sort(arr) {
+					if (arr.length <= 1) {
+						return;
+					}
+
+					for (var i = 0; i < arr.length; i++) {
+						var x = arr[i];
+						var j = i - 1;
+
+						while (j >= 0 && arr[j].freq <= x.freq) {
+							arr[j + 1] = arr[j];
+							j--;
+						}
+
+						arr[j + 1] = x;
+					}
+				}
+				//sort(lines);
 				
-				console.log(maxRow, maxCol, maxRow * deltaTheta * 180 / Math.PI, maxCol * deltaR - rOffset);
+				var maxima = lines.filter(function(line, i) {
+					if (i === 0 || i === lines.length - 1) {
+						return;
+					}
+					
+					let lastFreq = lines[i - 1].freq;
+					let freq = line.freq;
+					let nextFreq = lines[i + 1].freq;
+					
+					let lastSlope = freq - lastFreq;
+					let nextSlope = nextFreq - freq;
+					
+					let lastSign = lastSlope >= 0 ? 1 : -1;
+					let nextSign = nextSlope >= 0 ? 1 : -1;
+					
+					return (lastSign === 1 && nextSign === -1);
+				});
+				sort(maxima);
 				
-				return -1 / Math.tan(maxRow * deltaTheta);
+				console.log("accum", accum);
+				console.log("lines", lines);
+				console.log("maxima", maxima);
+				
+				return -1 / Math.tan(maxima[0].theta);
+				
+				//console.log(maxRow, maxCol, maxRow * deltaTheta * 180 / Math.PI, maxCol * deltaR - rOffset);
+				
+				//return -1 / Math.tan(maxRow * deltaTheta);
 				
 				/*var STDEVS = [];
 				rValues.forEach(function(rs, i) {
@@ -505,6 +596,8 @@
 				
 				//return Math.tan(Math.PI - STDEVS.indexOf(leastSpread) * deltaTheta);
 			}
+			
+			var Lines;
 			
 			function deskew(image) {
 				//var slope = 1 / getSkew(image);
