@@ -248,7 +248,31 @@ if (!console.blog)
 			}
 		}
 		
+		that.getJSON = function() {
+			return JSON.stringify(this.toObject());
+		}
+		
 		return that;
+	}
+	
+	Layer.fromObject = function(obj, activFunc, dActivFunc) {
+		if (obj.type === "FullyConnectedLayer") {
+			return FullyConnectedLayer.fromObject(obj, activFunc, dActivFunc);
+		} else if (obj.type === "VectorizationLayer") {
+			return VectorizationLayer.fromObject(obj);
+		} else if (obj.type === "AveragePoolingLayer") {
+			return AveragePoolingLayer.fromObject(obj);
+		} else if (obj.type === "MaxPoolingLayer") {
+			return MaxPoolingLayer.fromObject(obj);
+		} else if (obj.type === "ConvolutionLayer") {
+			return ConvolutionLayer.fromObject(obj);
+		} else {
+			throw new Error("Layer type not recognized");
+		}
+	}
+	
+	Layer.parseJSON = function(str, activFunc, dActivFunc) {
+		return Layer.fromObject(JSON.parse(str), activFunc, dActivFunc);
 	}
 	
 	/**
@@ -275,7 +299,7 @@ if (!console.blog)
 		let weightColumns = numInputs;
 		let weightedSums;
 		let output;
-		let feedbackOutput;
+		let feedbackOutput = new Matrix(numInputs, 1);
 		let adjustments = Object.create(null);
 		adjustments.weights = new Matrix(weightRows, weightColumns);
 		adjustments.biases = new Matrix(numOutputs, 0);
@@ -358,7 +382,7 @@ if (!console.blog)
 		// Populates the feedbackOutput matrix
 		that.computeFeedback = function() {
 			let feedbackInput = this.feedbackInput;
-			feedbackOutput = new Matrix(numInputs, 1);
+			//feedbackOutput = new Matrix(numInputs, 1);
 			
 			feedbackOutput.data.forEach(function(row, i) {
 				row[0] = feedbackInput.data.reduce(function(acc, num, j) {
@@ -389,7 +413,26 @@ if (!console.blog)
 			});
 		}
 		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "FullyConnectedLayer";
+			obj.numInputs = numInputs;
+			obj.numOutputs = numOutputs;
+			obj.weights = vectorize(weights);
+			obj.biases = vectorize(biases);
+			
+			return obj;
+		}
+		
 		return that;
+	}
+	
+	FullyConnectedLayer.fromObject = function(obj, activFunc, dActivFunc) {		
+		if (!dActivFunc) {
+			dActivFunc = numDeriv(activFunc);
+		}
+		
+		return FullyConnectedLayer(obj.numInputs, obj.numOutputs, activFunc, dActivFunc, new Matrix(obj.numOutputs, obj.numInputs, obj.weights), new Matrix(obj.numOutputs, 1, obj.biases));
 	}
 	
 	/**
@@ -468,8 +511,22 @@ if (!console.blog)
 		// Does nothing
 		that.adjustInternalValues = function() {
 		}
+		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "VectorizationLayer";
+			obj.numImgs = numImgs;
+			obj.imgRows = imgRows;
+			obj.imgColumns = imgColumns;
+			
+			return obj;
+		}
 	
 		return that;
+	}
+	
+	VectorizationLayer.fromObject = function(obj) {
+		return VectorizationLayer(obj.numImgs, obj.imgRows, obj.imgColumns);
 	}
 	
 	/**
@@ -509,6 +566,13 @@ if (!console.blog)
 			let pos = Object.create(null);
 			pos.row = Math.floor(row / winSize);
 			pos.column = Math.floor(column / winSize);
+			return pos;
+		}
+		
+		that.mapToImage = function(outRow, outColumn, poolRow, poolColumn) {
+			let pos = Object.create(null);
+			pos.row = outRow * winSize + poolRow;
+			pos.column = outColumn * winSize + poolColumn;
 			return pos;
 		}
 		
@@ -578,38 +642,63 @@ if (!console.blog)
 				pooledImg.data[row][column] = pixel;
 			}
 		}
-		let feedbackOutput;
+		
+		let feedbackOutput = [];
+		for (var i = 0; i < numImgs; i++) {
+			feedbackOutput.push(new Matrix(imgRows, imgColumns, 0));
+		}
 		
 		that.computeFeedback = function() {
 			let feedbackInput = this.feedbackInput;
 			let pooledImgs = this.output;
 			let imgs = this.input;
-			let feedback = [];
+			//let feedback = [];
 			
 			imgs.forEach(function(img, i) {
 				let pooledImg = pooledImgs[i];
-				let feedbackImg = new Matrix(imgRows, imgColumns);
-				img.data.forEach(function(row, j) {
-					row.forEach(function(pixel, k) {
-						let poolPos = that.mapToPool(j, k);
-						let pooledPixel = pooledImg.data[poolPos.row][poolPos.column];
-						if (pixel === pooledPixel) {
-							feedbackImg.data[j][k] = feedbackInput[i].data[poolPos.row][poolPos.column];
-						} else {
-							feedbackImg.data[j][k] = 0;
+				//let feedbackImg = new Matrix(imgRows, imgColumns, 0);
+				let feedbackImg = feedbackOutput[i];
+				feedbackInput[i].data.forEach(function(fdMatrixRow, fdRow) {
+					fdMatrixRow.forEach(function(fdMatrixPixel, fdCol) {
+						let pooledPixel = pooledImg.data[fdRow][fdCol];
+						for (var poolRow = 0; poolRow < winSize; poolRow++) {
+							for (var poolCol = 0; poolCol < winSize; poolCol++) {
+								let imgPos = that.mapToImage(fdRow, fdCol, poolRow, poolCol);
+								let imgPixel = img.data[imgPos.row][imgPos.column];
+								
+								if (imgPixel >= pooledPixel) {
+									feedbackImg.data[imgPos.row][imgPos.column] = fdMatrixPixel;
+									return;
+								}
+							}
 						}
 					});
 				});
-				feedback.push(feedbackImg);
+				//feedback.push(feedbackImg);
 			});
 			
-			feedbackOutput = feedback;
+			//feedbackOutput = feedback;
+		}
+		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "MaxPoolingLayer";
+			obj.numImgs = numImgs;
+			obj.imgRows = imgRows;
+			obj.imgColumns = imgColumns;
+			obj.winSize = winSize;
+			
+			return obj;
 		}
 		
 		Object.defineProperty(that, "addToPool", {get(){return maxPool}});
 		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
 		
 		return that;
+	}
+	
+	MaxPoolingLayer.fromObject = function(obj) {
+		return MaxPoolingLayer(obj.numImgs, obj.imgRows, obj.imgColumns, obj.winSize);
 	}
 	
 	/**
@@ -630,33 +719,53 @@ if (!console.blog)
 		let avgPool = function(pixel, row, column, pooledImg) {
 			pooledImg.data[row][column] += (pixel / Math.pow(winSize, 2));
 		}
-		let feedbackOutput;
+		
+		let feedbackOutput = [];
+		for (var i = 0; i < numImgs; i++) {
+			feedbackOutput.push(new Matrix(imgRows, imgColumns, 0));
+		}
 		
 		that.computeFeedback = function() {
 			let feedbackInput = this.feedbackInput;
 			let pooledImgs = this.output;
 			let imgs = this.input;
-			let feedback = [];
+			//let feedback = [];
 			
 			imgs.forEach(function(img, i) {
 				let pooledImg = pooledImgs[i];
-				let feedbackImg = new Matrix(imgRows, imgColumns);
+				//let feedbackImg = new Matrix(imgRows, imgColumns);
+				let feedbackImg = feedbackOutput[i];
 				img.data.forEach(function(row, j) {
 					row.forEach(function(pixel, k) {
 						let poolPos = that.mapToPool(j, k);
 						feedbackImg.data[j][k] = (1 / Math.pow(that.winSize, 2)) * feedbackInput[i].data[poolPos.row][poolPos.column];
 					});
 				});
-				feedback.push(feedbackImg);
+				//feedback.push(feedbackImg);
 			});
 			
-			feedbackOutput = feedback;
+			//feedbackOutput = feedback;
+		}
+		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "AveragePoolingLayer";
+			obj.numImgs = numImgs;
+			obj.imgRows = imgRows;
+			obj.imgColumns = imgColumns;
+			obj.winSize = winSize;
+			
+			return obj;
 		}
 		
 		Object.defineProperty(that, "addToPool", {get(){return avgPool}});
 		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
 		
 		return that;
+	}
+	
+	AveragePoolingLayer.fromObject = function(obj) {
+		return AveragePoolingLayer(obj.numImgs, obj.imgRows, obj.imgColumns, obj.winSize);
 	}
 	
 	/**
@@ -668,7 +777,23 @@ if (!console.blog)
 		}
 		
 		let that = createObject(Layer(), ConvolutionLayer);
+		let biasedConvs;
 		let output;
+		let feedbackOutput = [];
+		for (var i = 0; i < numImgs; i++) {
+			feedbackOutput.push(new Matrix(imgRows, imgColumns, 0));
+		}
+		let adjustments = Object.create(null);
+		adjustments.kernels = new Matrix(numImgs, kernelsPerImg);
+		adjustments.biases = [];
+		
+		// Offsets to center a kernel at a pixel
+		let kRowOff = Math.floor((kernelRows - 1) / 2);
+		let kColOff = Math.floor((kernelColumns - 1) / 2);
+		
+		// Size of output images
+		let outputRows = imgRows - (2 * kRowOff);
+		let outputColumns = imgColumns - (2 * kRowOff);
 		
 		Object.defineProperty(that, "numImgs", {get(){return numImgs}});
 		Object.defineProperty(that, "imgRows", {get(){return imgRows}});
@@ -678,7 +803,10 @@ if (!console.blog)
 		Object.defineProperty(that, "kernelColumns", {get(){return kernelColumns}});
 		Object.defineProperty(that, "kernels", {get(){return kernels}});
 		Object.defineProperty(that, "biases", {get(){return biases}});
+		Object.defineProperty(that, "biasedConvs", {get(){return biasedConvs}});
 		Object.defineProperty(that, "output", {get(){return output}});
+		Object.defineProperty(that, "feedbackOutput", {get(){return feedbackOutput}});
+		Object.defineProperty(that, "adjustments", {get(){return adjustments}});
 		
 		// Validates a kernel matrix
 		function validateKernels(kernels) {
@@ -705,7 +833,7 @@ if (!console.blog)
 		// Returns a copy of the kernel matrix
 		function copyKernels(data) {
 			let kernels = new Matrix(numImgs, kernelsPerImg);
-			data.forEach(function(row, i) {
+			data.data.forEach(function(row, i) {
 				row.forEach(function(kernel, j) {
 					kernels.data[i][j] = copy(kernel);
 				});
@@ -737,7 +865,7 @@ if (!console.blog)
 		// Returns a bias matrix with biases set to 0
 		function randomBiases() {
 			let biases = [];
-			for (var i = 0; i < numImgs; i++) {
+			for (var i = 0; i < kernelsPerImg; i++) {
 				biases.push(0);
 			}
 			return biases;
@@ -762,7 +890,7 @@ if (!console.blog)
 		
 		// Check if a bias matrix is provided, and validate it if so
 		if (biases) {
-			if (biases.length === numImgs) {
+			if (biases.length === kernelsPerImg) {
 				biases = copyBiases(biases);
 			} else {
 				throw new Error("Improperly formatted biases");
@@ -777,70 +905,167 @@ if (!console.blog)
 				return false;
 			}
 			
-			for (var i = 0; i < data.length; i++) {
-				if (data[i].rows !== imgRows || data[i].columns !== imgColumns) {
-					return false;
-				}
+			return data.every(function(image) {
+				return image.rows === imgRows && image.columns === imgColumns;
+			});
+		}
+		
+		that.validateFeedbackInput = function(data) {
+			if (data.length !== kernelsPerImg) {
+				return false;
 			}
 			
-			return true;
+			return data.every(function(feedbackImg) {
+				return (feedbackImg.rows === (imgRows - 2 * kRowOff)) && (feedbackImg.columns === (imgColumns - 2 * kColOff));
+			});
 		}
 		
 		// Computes convolved images from input images
 		that.compute = function() {
-			let input = this.input;
+			let images = this.input;
+			biasedConvs = [];
 			let results = [];
 			
-			// Loops through each row of the kernel matrix
-			kernels.data.forEach(function(row, i) {
-				let newImg;
-				
-				// Loops through each kernel in the row
-				row.forEach(function(kernel, j) {
-					// Convolves the input image with the kernel
-					let convolvedImg = convolve(kernel, biases[j], input[j], false);
+			// Loops through each image, applying a row of kernel convolutions to it
+			images.forEach(function(image, i) {
+				// Each image has a row of kernels that operate on it
+				kernels.data[i].forEach(function(kernel, k) {
+					// Perform convolution without bias
+					let convolvedImg = convolve(kernel, 0, image, false);
 					
-					// If this is not the first image, add together the convolved image with the previous ones
-					if (j === 0) {
-						newImg = convolvedImg;
+					// Combines the convolution with convolutions of other images in the result vector
+					if (!biasedConvs[k]) {
+						biasedConvs[k] = convolvedImg;
 					} else {
-						add(newImg, convolvedImg, false, true);
+						add(biasedConvs[k], convolvedImg, false, true);
 					}
 				});
-				
-				// Passes the new image through the activation function
-				applyFunc(newImg, activFunc, true);
-				
-				// Pushes the new image to the results
-				results.push(newImg);
+			});
+			
+			// Adds the bias and applies the activation function to each output image
+			biasedConvs.forEach(function(conv, i) {
+				add(conv, biases[i], false, true);
+				results[i] = applyFunc(conv, activFunc);
 			});
 			
 			output = results;
 		}
 		
 		that.computeFeedback = function() {
-			let feedback = [];
+			let images = this.input;
+			let feedbackInput = this.feedbackInput;
+			let feedbackAFD = []; // Stores derivatives of biasedConvs with respect to Loss. Same dimensions as feedback
 			
-			// Loops through each image
-			for (var img = 0; img < numImgs; img++) {
-				feedbackImg = new Matrix(imgRows, imgColumns);
+			feedbackInput.forEach(function(feedbackImg, i) {
+				feedbackAFDMatrix = new Matrix(feedbackImg.rows, feedbackImg.columns);
+				feedbackAFDMatrix.data.forEach(function(fdRow, row) {
+					fdRow.forEach(function(fd, col) {
+						feedbackAFDMatrix.data[row][col] = feedbackImg.data[row][col] * dActivFunc(biasedConvs[i].data[row][col]);
+					});
+				});
+				feedbackAFD.push(feedbackAFDMatrix);
+			});
+			
+			// Loops through each image, calculating the feedback and partial derivatives for the weights
+			images.forEach(function(image, i) {
+				feedbackImg = new Matrix(imgRows, imgColumns, 0);
 				
-				// For each image, loops through each kernel in the kernel matrix column
-				for (var kernel = 0; kernel < kernelsPerImg; kernel++) {
-					feedbackImg.data.forEach(function(row, imgRow) {
-						row.forEach(function(col, imgCol) {
+				// Loops through each kernel in the image's row
+				kernels.data[i].forEach(function(kernel, k) {
+					let feedbackKernel = new Matrix(kernelRows, kernelColumns, 0);
+					
+					// Loops through each pixel of the image
+					image.data.forEach(function(pixelRow, pRow) {
+						pixelRow.forEach(function(pixel, pCol) {
+							// Check if the current pixel is on the output image.
+							if (pRow < kRowOff || (imgRows - kRowOff) <= pRow || pCol < kColOff || (imgColumns - kColOff) <= pCol) {
+								return;
+							}
 							
+							let centerRow = pRow;
+							let centerCol = pCol;
+							let fdRow = pRow - kRowOff;
+							let fdCol = pCol - kColOff;
+							
+							// Loops through each weight in the kernel
+							kernel.data.forEach(function(kernelRow, wRow) {
+								// Image row for the given weight
+								let imgRow = pRow + wRow - kRowOff;
+								kernelRow.forEach(function(weight, wCol) {
+									// Image column for the given weight
+									let imgCol = pCol + wCol - kColOff;
+									feedbackImg.data[imgRow][imgCol] += weight * feedbackAFD[k].data[fdRow][fdCol];
+									feedbackKernel.data[wRow][wCol] += image.data[imgRow][imgCol] * feedbackAFD[k].data[fdRow][fdCol];
+								});
+							});
 						});
 					});
-				}
-				
-				feedback.push(feedbackImg);
-			}
+					
+					adjustments.kernels.data[i][k] = feedbackKernel;
+				});
+				feedbackOutput[i] = feedbackImg;
+			});
 			
-			feedbackOutput = feedback;
+			// Loops through each output image and calculates the partial derivatives for the biases
+			for (var i = 0; i < kernelsPerImg; i++) {
+				adjustments.biases[i] = 0;
+				for (var j = 0; j < outputRows; j++) {
+					for (var k = 0; k < outputColumns; k++) {
+						adjustments.biases[i] += feedbackAFD[i].data[j][k];
+					}
+				}
+			}
+		}
+
+		// Adjusts kernel weights and biases
+		that.adjustInternalValues = function(learningRate) {
+			kernels.data.forEach(function(kernelRow, i) {
+				kernelRow.forEach(function(kernel, j) {
+					kernel.data.forEach(function(row, k) {
+						row.forEach(function(weight, l) {
+							row[l] -= learningRate * adjustments.kernels.data[i][j].data[k][l];
+						});
+					});
+				});
+			});
+			
+			biases.forEach(function(bias, i) {
+				biases[i] -= learningRate * adjustments.biases[i];
+			});
+		}
+		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "ConvolutionLayer";
+			obj.numImgs = numImgs;
+			obj.imgRows = imgRows;
+			obj.imgColumns = imgColumns;
+			obj.kernelsPerImg = kernelsPerImg;
+			obj.kernelRows = kernelRows
+			obj.kernelColumns = kernelColumns;
+			obj.kernels = vectorize(kernels).map(function(kernel){return vectorize(kernel)});
+			obj.biases = biases;
+			
+			return obj;
 		}
 		
 		return that;
+	}
+	
+	ConvolutionLayer.fromObject = function(obj, activFunc, dActivFunc) {
+		let kernels = new Matrix(obj.numImgs, obj.kernelsPerImg);
+		
+		kernels.data.forEach(function(kernelRow, i) {
+			kernelRow.forEach(function(kernel, j) {
+				kernels.data[i][j] = new Matrix(obj.kernelRows, obj.kernelColumns, obj.kernels[i * obj.kernelColumns + j]);
+			});
+		});
+		
+		if (!dActivFunc) {
+			dActivFunc = numDeriv(activFunc);
+		}
+		
+		return ConvolutionLayer(obj.numImgs, obj.imgRows, obj.imgColumns, obj.kernelsPerImg, obj.kernelRows, obj.kernelColumns, activFunc, dActivFunc, kernels, obj.biases);
 	}
 	
 	var LossFunction = function() {
@@ -875,7 +1100,25 @@ if (!console.blog)
 			}
 		}
 		
+		that.getJSON = function() {
+			return JSON.stringify(this.toObject());
+		}
+		
 		return that;
+	}
+	
+	LossFunction.fromObject = function(obj) {
+		if (obj.type === "SquaredErrorLoss") {
+			return SquaredErrorLoss.fromObject(obj);
+		} else if (obj.type === "MeanSquaredErrorLoss") {
+			return MeanSquaredErrorLoss.fromObject(obj);
+		} else {
+			throw new Error("LossFunction type not recognized");
+		}
+	}
+	
+	LossFunction.parseJSON = function(str) {
+		return LossFunction.fromObject(JSON.parse(str));
 	}
 	
 	var SquaredErrorLoss = function(numPredictions) {
@@ -922,7 +1165,19 @@ if (!console.blog)
 			});
 		}
 		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "SquaredErrorLoss";
+			obj.numPredictions = numPredictions;
+			
+			return obj;
+		}
+		
 		return that;
+	}
+	
+	SquaredErrorLoss.fromObject = function(obj) {
+		return SquaredErrorLoss(obj.numPredictions);
 	}
 	
 	var MeanSquaredErrorLoss = function(numPredictions) {
@@ -969,7 +1224,19 @@ if (!console.blog)
 			});
 		}
 		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.type = "MeanSquaredErrorLoss";
+			obj.numPredictions = numPredictions;
+			
+			return obj;
+		}
+		
 		return that;
+	}
+	
+	MeanSquaredErrorLoss.fromObject = function(obj) {
+		return MeanSquaredErrorLoss(obj.numPredictions);
 	}
 	
 	var Network = function(layers, lossFunction) {
@@ -1046,7 +1313,27 @@ if (!console.blog)
 			loss = lossFunction.loss;
 		}
 		
+		that.toObject = function() {
+			let obj = Object.create(null);
+			obj.layers = layers.map(function(layer){return layer.toObject()});
+			obj.lossFunction = lossFunction.toObject();
+			
+			return obj;
+		}
+		
+		that.getJSON = function() {
+			return JSON.stringify(this.toObject());
+		}
+		
 		return that;
+	}
+	
+	Network.fromObject = function(obj, activFunc, dActivFunc) {
+		return Network(obj.layers.map(function(layer){return Layer.fromObject(layer, activFunc, dActivFunc)}), LossFunction.fromObject(obj.lossFunction));
+	}
+	
+	Network.parseJSON = function(str) {
+		return Network.fromObject(JSON.parse(str));
 	}
 	
 	var FCNetwork = function(neuronArray, activFunc, dActivFunc) {
@@ -1120,6 +1407,24 @@ if (!console.blog)
 	}
 }
 
+/*var Teacher = function(network) {
+	if (this.constructor === Teacher) {
+		return Teacher(...arguments);
+	}
+	
+	let that = createObject(Object.create(null), Network);
+	
+	that.train = function() {
+		asyncLoop
+	}
+	
+	that.test = function() {
+		
+	}
+	
+	return that;
+}*/
+
 /*var layerDataList = [];
 layerDataList.push(new LayerData("convolution", 6, 5, false));
 layerDataList.push(new LayerData("rectifier", activFunc));
@@ -1128,12 +1433,22 @@ layerDataList.push(new LayerData("convolution", 12, 5, false));
 layerDataList.push(new LayerData("rectifier", activFunc));
 layerDataList.push(new LayerData("pooling", 2, 2));*/
 
-/*var layers = [];
+var layers = [];
 layers.push(new ConvolutionLayer(1, 28, 28, 6, 5, 5, activFunc));
 layers.push(new MaxPoolingLayer(6, 24, 24, 2));
 layers.push(new ConvolutionLayer(6, 12, 12, 12, 5, 5, activFunc));
 layers.push(new MaxPoolingLayer(12, 8, 8, 2));
 layers.push(new VectorizationLayer(12, 4, 4));
 layers.push(new FullyConnectedLayer(192, 10, activFunc));
+var lossFunction = new SquaredErrorLoss(10);
+var conNet = new Network(layers, lossFunction);
+conNet.propagateToInput = true;
+
+/*var layers = [];
+layers.push(new MaxPoolingLayer(1, 28, 28, 2));
+layers.push(new ConvolutionLayer(1, 14, 14, 1, 5, 5, activFunc));
+layers.push(new VectorizationLayer(1, 10, 10));
+var weightMatrix = new Matrix(10, 100, 0.1);
+layers.push(new FullyConnectedLayer(100, 10, activFunc, undefined, weightMatrix));
 var lossFunction = new SquaredErrorLoss(10);
 var conNet = new Network(layers, lossFunction);*/

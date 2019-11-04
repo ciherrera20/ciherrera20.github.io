@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<title>Huffman Coding</title>
-		<script src="../scripts/HuffmanCoding.js"></script>
+		<script src="../scripts/HuffmanCoding2.js"></script>
 	</head>
 	<body>
 		<input id="upload" type="file"></input>
@@ -25,7 +25,7 @@
 			var textarea = document.getElementsByTagName("textarea")[0];
 			var downloadBin = document.getElementById("downloadBin");
 			
-			var bitArray;
+			//var bitArray;
 			var dcMsg;
 			var fileName;
 			
@@ -39,10 +39,11 @@
 					if (extension[0] !== ".bin") {
 						textarea.value = fileReader.result;
 					} else {
-						var arrayBuffer = fileReader.result;
-						var dataView = new DataView(fileReader.result);
-						bitArray = new BitArray(dataView);
-						dcMsg = decompressFromBitArray(bitArray);
+						//var arrayBuffer = fileReader.result;
+						//var dataView = new DataView(fileReader.result);
+						//bitArray = new BitArray(dataView);
+						//dcMsg = decompressFromBitArray(bitArray);
+						dcMsg = decodeBuffer(fileReader.result);
 						textarea.value = dcMsg;
 					}
 				};
@@ -54,7 +55,8 @@
 			});
 			
 			downloadBin.onclick = function() {
-				downloadBitArray(compressToBitArray(textarea.value), fileName + ".bin");
+				//downloadBitArray(compressToBitArray(textarea.value), fileName + ".bin");
+				downloadHuffmanBin(encodeString(textarea.value), fileName + ".bin");
 			}
 			
 			downloadTxt.onclick = function() {

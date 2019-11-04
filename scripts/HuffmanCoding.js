@@ -1,3 +1,4 @@
+// Creates a Huffman Tree from a string of characters
 function getTree(message) {
 	let characters = Object.create(null);
 	let tree = [];
@@ -78,6 +79,7 @@ function getTree(message) {
 	return tree[0];
 }
 
+// Compresses a string of characters given a Huffman Tree
 function compressWithTree(tree, message/*, subs*/) {
 	let newMessage = "";
 	
@@ -103,6 +105,7 @@ function compressWithTree(tree, message/*, subs*/) {
 	return newMessage;
 }
 
+// Encodes a Huffman Tree into a string of 0s and 1s
 function encodeTree(tree) {
 	function getCharString(char) {
 		let charString = char.charCodeAt(0).toString(2);
@@ -146,6 +149,7 @@ function encodeTree(tree) {
 	return string;
 }
 
+// Decompresses a string of 0s and 1s given a Huffman Tree
 function decompressWithTree(tree, message) {
 	let currentNode = tree;
 	let newMessage = "";
@@ -161,6 +165,7 @@ function decompressWithTree(tree, message) {
 	return newMessage;
 }
 
+// Decodes a string of 0s and 1s into a Huffman Tree
 function decodeTree(rawCharData) {
 	let string = "";
 	let tempCharData = "";
@@ -264,6 +269,8 @@ function decodeTree(rawCharData) {
 	return tree;
 }
 
+// Compresses a string of characters into a string of 0s and 1s
+// Probably should refactor this later, as this intermediate step is almost definitely larger than the input
 function compressToString(message) {
 	let tree = getTree(message);
 	let encTree = encodeTree(tree);
@@ -282,6 +289,7 @@ function compressToString(message) {
 	return treeLengthData + encTree + msgLengthData + newMessage;
 }
 
+// Decompresses a string of 0s and 1s into a string of characters
 function decompressFromString(message) {
 	let treeLengthData = Number("0b" + message.slice(0, 16)) * 8;
 	let encTree = message.slice(16, 16 + treeLengthData);
@@ -293,6 +301,7 @@ function decompressFromString(message) {
 	return decompressWithTree(tree, cmMsg);
 }
 
+// Compresses a string of characters into a BitArray, which stores the raw binary data
 function compressToBitArray(message) {
 	let cmMsg = compressToString(message);
 	let bitArray = new BitArray(cmMsg.length);
@@ -302,10 +311,12 @@ function compressToBitArray(message) {
 	return bitArray;
 }
 
+// Decompresses a BitArray into a string of characters
 function decompressFromBitArray(bitArray) {
 	return decompressFromString(bitArray.splice(0, bitArray.length));
 }
 
+// Downloads a BitArray as a file
 function downloadBitArray(bitArray, name = "save.bin") {
 	let blob = new Blob([bitArray.getUint8Array().buffer], {type: "application/octet-stream"});
 	let url = window.URL.createObjectURL(blob);
@@ -316,6 +327,7 @@ function downloadBitArray(bitArray, name = "save.bin") {
 	window.URL.revokeObjectURL(url);
 }
 
+// BitArray object. Supports single bit operations, and conversions to and from strings. Can also be converted into a Uint8Array
 function BitArray(length) {
 	if (!(this instanceof BitArray))
 		return new BitArray(length);
