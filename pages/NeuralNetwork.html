@@ -5,7 +5,7 @@
 		<script src="../scripts/Matrix.js"></script>
 		<script src="../scripts/NeuralNetwork3.js"></script>
 		<script src="../scripts/BitArray.js"></script>
-		<script src="../scripts/HuffmanCoding.js"></script>
+		<script src="../scripts/HuffmanCoding2.js"></script>
 	</head>
 	
 	<body>
@@ -169,13 +169,14 @@
 			}
 			
 			function downloadNetworkData() {
-				let blob = new Blob([network.getJSON()], {type: "application/json"});
+				/*let blob = new Blob([network.getJSON()], {type: "application/json"});
 				let url = window.URL.createObjectURL(blob);
 				let a = document.createElement("a");
 				a.href = url;
 				a.download = name;
 				a.click();
-				window.URL.revokeObjectURL(url);
+				window.URL.revokeObjectURL(url);*/
+				downloadHuffmanBin(encodeToBuffer(network.getJSON()), `network.net`);
 				//downloadBitArray(compressToBitArray(network.getJSON()), `network.net`);
 			}
 			
@@ -387,15 +388,32 @@
 				var fileReader = new FileReader();
 				
 				fileReader.onload = function() {
-					//network = Network.parseJSON(decompressFromBitArray(new BitArray(new Uint8Array(fileReader.result))));
-					network = useJSONData(fileReader.result);
+					network = Network.parseJSON(decodeBuffer(fileReader.result), activFunc);
+					//network = useJSONData(fileReader.result);
 					
 					console.log("Network loaded");
 				}
 				
-				fileReader.readAsText(networkInput.files[0]);
-				//fileReader.readAsArrayBuffer(networkInput.files[0]);
+				//fileReader.readAsText(networkInput.files[0]);
+				fileReader.readAsArrayBuffer(networkInput.files[0]);
 			});
+			
+			function openMatrixAsImg(matrix) {
+				var canvas = document.createElement("canvas");
+				var ctx = canvas.getContext("2d");
+				canvas.width = matrix.columns * 10;
+				canvas.height = matrix.rows * 10;
+				ctx.fillStyle = "white";
+				for (var x = 0; x < matrix.columns; x++) {
+					for (var y = 0; y < matrix.rows; y++) {
+						let alpha = Math.max(matrix.data[y][x], 0);
+						ctx.globalAlpha = alpha;
+						ctx.fillRect(x * 10, y * 10, 10, 10);
+					}
+				}
+				var url = canvas.toDataURL("image/png");
+				console.log(url);
+			}
 			
 			function centerOfMass(image) {
 				var x = 0, y = 0;
@@ -421,23 +439,6 @@
 				var cX = (image.columns - 1) / 2;
 				var cY = (image.rows - 1) / 2;
 				var lnum = 1000;
-
-				/*image.data.forEach(function(row, y) {
-					row.forEach(function(pixel, x) {
-						var dist = Math.sqrt(Math.pow(x - cX, 2) + Math.pow(y - cY, 2));
-						var newAngle = Math.atan2(y - cY, x - cX) - angle;
-						var newX = dist * Math.cos(newAngle) + cX;
-						var newY = dist * Math.sin(newAngle) + cY;
-
-						newX = Math.ceil(Math.round(newX * lnum) / lnum);
-						newY = Math.ceil(Math.round(newY * lnum) / lnum);
-
-						//console.log(dist, x, y, cX, cY, newAngle, newX, newY);
-						
-						if (0 <= newX && newX <= image.columns - 1 && 0 <= newY && newY <= image.rows - 1)
-						rotImg.data[newY][newX] = pixel;
-					});
-				});*/
 				
 				rotImg.data.forEach(function(row, y) {
 					row.forEach(function(pixel, x) {
@@ -583,29 +584,6 @@
 				console.log("maxima", maxima);
 				
 				return -1 / Math.tan(maxima[0].theta);
-				
-				//console.log(maxRow, maxCol, maxRow * deltaTheta * 180 / Math.PI, maxCol * deltaR - rOffset);
-				
-				//return -1 / Math.tan(maxRow * deltaTheta);
-				
-				/*var STDEVS = [];
-				rValues.forEach(function(rs, i) {
-					var mean = rs.reduce(function(acc, cur) {
-						return acc + (cur / rs.length);
-					}, 0);
-					
-					var sqrSum = rs.reduce(function(acc, cur) {
-						return acc + Math.pow(cur - mean, 2);
-					}, 0);
-					
-					STDEVS.push(Math.sqrt(sqrSum / (rs.length - 1)));
-				});
-				
-				var leastSpread = STDEVS.reduce(function(acc, cur) {
-					return acc <= cur ? acc : cur;
-				});*/
-				
-				//return Math.tan(Math.PI - STDEVS.indexOf(leastSpread) * deltaTheta);
 			}
 			
 			var Lines;

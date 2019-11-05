@@ -26,6 +26,7 @@
 			var downloadBin = document.getElementById("downloadBin");
 			
 			//var bitArray;
+			var arrayBuffer;
 			var dcMsg;
 			var fileName;
 			
@@ -36,27 +37,37 @@
 				var extension = file.name.match(/\.[0-9a-z]+$/i);
 				
 				fileReader.onload = function(e) {
-					if (extension[0] !== ".bin") {
+					if (extension[0] === ".txt") {
+						console.log("Loading text file...");
 						textarea.value = fileReader.result;
 					} else {
-						//var arrayBuffer = fileReader.result;
+						console.log("Start decoding...");
+						arrayBuffer = fileReader.result;
 						//var dataView = new DataView(fileReader.result);
 						//bitArray = new BitArray(dataView);
 						//dcMsg = decompressFromBitArray(bitArray);
-						dcMsg = decodeBuffer(fileReader.result);
+						dcMsg = decodeBuffer(arrayBuffer);
+						console.log("Decoding finished");
 						textarea.value = dcMsg;
 					}
 				};
 				
-				if (extension[0] !== ".bin")
+				console.log(`File of type ${extension[0]} uploaded`);
+				
+				if (extension[0] === ".txt") {
+					fileReader.readAsText(file);
+				} else {
+					fileReader.readAsArrayBuffer(file);
+				}
+				/*if (extension[0] !== ".bin" || extension[0] !== ".net")
 					fileReader.readAsText(file);
 				else
-					fileReader.readAsArrayBuffer(file);
+					fileReader.readAsArrayBuffer(file);*/
 			});
 			
 			downloadBin.onclick = function() {
 				//downloadBitArray(compressToBitArray(textarea.value), fileName + ".bin");
-				downloadHuffmanBin(encodeString(textarea.value), fileName + ".bin");
+				downloadHuffmanBin(encodeToBuffer(textarea.value), fileName + ".bin");
 			}
 			
 			downloadTxt.onclick = function() {

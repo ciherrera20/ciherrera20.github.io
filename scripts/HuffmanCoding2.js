@@ -250,7 +250,7 @@ function decodeTree(u8arr) {
  * @param str - The string to encode
  * @return - The blob representing the Huffman Coding of the string
  */
-function encodeString(str) {
+function encodeToBuffer(str) {
 	// Gets the Huffman Tree for the string
 	let tree = getTree(str);
 	// Creates an object with characters as the keys and their paths as the values

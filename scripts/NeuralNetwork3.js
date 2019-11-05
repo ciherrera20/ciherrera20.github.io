@@ -265,7 +265,7 @@ if (!console.blog)
 		} else if (obj.type === "MaxPoolingLayer") {
 			return MaxPoolingLayer.fromObject(obj);
 		} else if (obj.type === "ConvolutionLayer") {
-			return ConvolutionLayer.fromObject(obj);
+			return ConvolutionLayer.fromObject(obj, activFunc, dActivFunc);
 		} else {
 			throw new Error("Layer type not recognized");
 		}
@@ -1332,8 +1332,8 @@ if (!console.blog)
 		return Network(obj.layers.map(function(layer){return Layer.fromObject(layer, activFunc, dActivFunc)}), LossFunction.fromObject(obj.lossFunction));
 	}
 	
-	Network.parseJSON = function(str) {
-		return Network.fromObject(JSON.parse(str));
+	Network.parseJSON = function(str, activFunc, dActivFunc) {
+		return Network.fromObject(JSON.parse(str), activFunc, dActivFunc);
 	}
 	
 	var FCNetwork = function(neuronArray, activFunc, dActivFunc) {
@@ -1363,7 +1363,7 @@ if (!console.blog)
 		
 		let that = createObject(Network(layers, lossFunction), FCNetwork);
 		
-		that.getJSON = function() {
+		/*that.getJSON = function() {
 			let obj = Object.create(null);
 			
 			obj.weightMatrices = [];
@@ -1398,7 +1398,7 @@ if (!console.blog)
 			let str = JSON.stringify(obj);
 			
 			return str;
-		}
+		}*/
 		
 		Object.defineProperty(that, "neuronArray", {get(){return neuronArray}});
 		Object.defineProperty(that, "numInputs", {get(){return numInputs}});
@@ -1443,6 +1443,13 @@ layers.push(new FullyConnectedLayer(192, 10, activFunc));
 var lossFunction = new SquaredErrorLoss(10);
 var conNet = new Network(layers, lossFunction);
 conNet.propagateToInput = true;
+
+/*var layers = [];
+layers.push(new ConvolutionLayer(1, 28, 28, 6, 5, 5, activFunc));
+layers.push(new MaxPoolingLayer(6, 24, 24, 2));
+layers.push(new ConvolutionLayer(6, 12, 12, 12, 5, 5, activFunc));
+layers.push(new MaxPoolingLayer(12, 8, 8, 2));
+layers.push(new ConvolutionLayer(12, 8, 8, ));*/
 
 /*var layers = [];
 layers.push(new MaxPoolingLayer(1, 28, 28, 2));
