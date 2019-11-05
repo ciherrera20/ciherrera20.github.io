@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Logic Gates</title>
+		
+		<link rel="stylesheet" type="text/css" href="LogicGates.css">
+		
+		<script src="draggable.js"></script>
+		<script src="LogicGates.js"></script>
+		<script src="sweetalert.min.js"></script>
+		<script src="HuffmanCoding.js"></script>
+	</head>
+	
+	<body>
+		<div id="backpackWrapper" class="columnFlex">   
+			<span class="rowFlex">
+				<h2>Components</h2>
+			</span>
+			<div id="backpackOptions" class="rowFlex">
+				<div id="addComponent" class="add">
+					<div class="vertical"></div>
+					<div class="horizontal"></div>
+				</div>
+				<label class="button">Load Save
+					<input id="loadSave" class="inputs" type="file"></input>
+				</label>
+				<label class="button">Save
+					<input id="save" class="inputs" type="button"></input>
+				</label>
+				<div class="settings"></div>
+			</div>
+			<div id="backpack" class="columnFlex">
+				<!-- <div class="componentTab"> -->
+					<!-- <div class="rowFlex"> -->
+						<!-- <span class="compName">nand</span> -->
+						<!-- <div class="rowFlex" id="nandButtonDiv"> -->
+							<!-- <div class="add"> -->
+								<!-- <div class="vertical"></div> -->
+								<!-- <div class="horizontal"></div> -->
+							<!-- </div> -->
+						<!-- </div> -->
+						<!-- <div class="rename"> -->
+							<!-- <div class="renIcon">R</div> -->
+						<!-- </div> -->
+						<!-- <div class="del"> -->
+							<!-- <div class="pos"></div> -->
+							<!-- <div class="neg"></div> -->
+						<!-- </div> -->
+					<!-- </div> -->
+				<!-- </div> -->
+			</div>
+			<div class="backpackFooter">
+				<div class="trash">
+				
+				</div>
+			</div>
+		</div>
+		
+		<!-- <div class="workspaceWrapper"> -->
+			<!-- <div class="columnFlex"> -->
+				<!-- <div class="workspaceOutputs"> -->
+					<!-- <div class="rowFlex"> -->
+						<!-- <div class="add"> -->
+							<!-- <div class="vertical"></div> -->
+							<!-- <div class="horizontal"></div> -->
+						<!-- </div> -->
+					<!-- </div> -->
+				<!-- </div> -->
+				<!-- <div class="workspace"> -->
+					<!-- <div class="component"> -->
+						<!-- <div class="columnFlex"> -->
+							<!-- <div class="componentNodes"> -->
+								<!-- <div class="rowFlex"> -->
+									<!-- <svg class="node"> -->
+										<!-- <circle cx="9" cy="9" r="8" stroke="black" fill="white" stroke-width="2" /> -->
+									<!-- </svg> -->
+								<!-- </div> -->
+							<!-- </div> -->
+							<!-- <span class="componentLabel">nand</span> -->
+							<!-- <div class="componentNodes"> -->
+								<!-- <div class="rowFlex"> -->
+									<!-- <svg class="node"> -->
+										<!-- <circle cx="9" cy="9" r="8" stroke="black" fill="white" stroke-width="2" /> -->
+									<!-- </svg> -->
+								<!-- </div> -->
+							<!-- </div> -->
+							<!-- <div class="inputTriangles"> -->
+								<!-- <div class="rowFlex"> -->
+									<!-- <svg class="triangle"> -->
+										<!-- <polygon points="2,10 14,10 8,2" stroke="black" fill="white" stroke-width="2"/> -->
+									<!-- </svg> -->
+								<!-- </div> -->
+							<!-- </div> -->
+						<!-- </div> -->
+					<!-- </div> -->
+				<!-- </div> -->
+				<!-- <div class="workspaceInputs"> -->
+					<!-- <div class="rowFlex"> -->
+						<!-- <div class="input"> -->
+							<!-- <div class="columnFlex"> -->
+								<!-- <svg class="node"> -->
+									<!-- <circle cx="9" cy="9" r="8" stroke="black" fill="white" stroke-width="2" /> -->
+								<!-- </svg> -->
+								<!-- <div class="label"> -->
+									<!-- 0 -->
+								<!-- </div> -->
+								<!-- <input type="checkbox"></input> -->
+							<!-- </div> -->
+						<!-- </div> -->
+						<!-- <div class="add"> -->
+							<!-- <div class="vertical"></div> -->
+							<!-- <div class="horizontal"></div> -->
+						<!-- </div> -->
+					<!-- </div> -->
+				<!-- </div> -->
+			<!-- </div> -->
+		<!-- </div> -->
+		
+		<script>
+			var currentSave = Object.create(null);
+			currentSave.data = [];
+			currentSave.saveInLocalStorage = function() {
+				localStorage.setItem("save", JSON.stringify(currentSave.data));
+			}
+			
+			window.onunload = currentSave.saveInLocalStorage;
+			
+			var workspaces = [];
+			
+			workspaces.select = function(selection) {
+				workspaces.current = undefined;
+				workspaces.forEach(function(workspace, index) {
+					if (typeof selection === "number") {
+						if (index !== selection) {
+							workspace.hide();
+						} else {
+							workspace.show();
+							workspaces.current = workspace;
+						}
+					} else {
+						if (workspace !== selection) {
+							workspace.hide();
+						} else {
+							workspace.show();
+							workspaces.current = workspace;
+						}
+					}
+				})
+			}
+			
+			workspaces.delete = function(deletion) {
+				workspaces.splice(workspaces.indexOf(deletion), 1);
+			}
+		
+			function purge(d) {
+				var a = d.attributes, i, l, n;
+				if (a) {
+					for (i = a.length - 1; i >= 0; i -= 1) {
+						n = a[i].name;
+						if (typeof d[n] === 'function') {
+							d[n] = null;
+						}
+					}
+				}
+				a = d.childNodes;
+				if (a) {
+					l = a.length;
+					for (i = 0; i < l; i += 1) {
+						purge(d.childNodes[i]);
+					}
+				}
+			}
+			
+			function createWorkspace(name) {
+				var workspaceWrapper = document.createElement("div");
+				var columnFlex = document.createElement("div");
+				var workspaceOutputs = document.createElement("div");
+				var outputsRowFlex = document.createElement("div");
+				var addOutput = createAddButton();
+				var workspace = document.createElement("div");
+				var workspaceName = document.createElement("span");
+				var workspaceInputs = document.createElement("div");
+				var inputsRowFlex = document.createElement("div");
+				var addInput = createAddButton();
+				
+				workspaceWrapper.className = "workspaceWrapper";
+				columnFlex.className = "columnFlex";
+				workspaceOutputs.className = "workspaceOutputs";
+				outputsRowFlex.className = "rowFlex";
+				workspace.className = "workspace";
+				workspaceName.innerHTML = name;
+				workspaceInputs.className = "workspaceInputs";
+				inputsRowFlex.className = "rowFlex";
+				
+				outputsRowFlex.appendChild(addOutput);
+				workspaceOutputs.appendChild(outputsRowFlex);
+				workspace.appendChild(workspaceName);
+				inputsRowFlex.appendChild(addInput);
+				workspaceInputs.appendChild(inputsRowFlex);
+				columnFlex.appendChild(workspaceOutputs);
+				columnFlex.appendChild(workspace);
+				columnFlex.appendChild(workspaceInputs);
+				workspaceWrapper.appendChild(columnFlex);
+				document.body.appendChild(workspaceWrapper);
+				
+				function addOutputToOutputSpace() {
+					var output = createOutput();
+					workspace.outputSpace.insertBefore(output, workspace.outputSpace.add);
+					outputs.push(output);
+					workspace.componentTab.addOutputToInstances();
+					workspace.componentTab.saveData.outputs.push(output.saveData);
+					//console.log(workspace.componentTab.saveData.outputs);
+					return output;
+				}
+				
+				function addInputToInputSpace() {
+					var input = createInput();
+					workspace.inputSpace.insertBefore(input, workspace.inputSpace.add);
+					inputs.push(input);
+					workspace.componentTab.addInputToInstances();
+					workspace.componentTab.saveData.inputs++;
+					return input;
+				}
+				
+				workspace.wrapper = workspaceWrapper;
+				workspace.outputSpace = outputsRowFlex;
+				workspace.outputSpace.add = addOutput;
+				workspace.outputSpace.addOutput = addOutputToOutputSpace;
+				workspace.inputSpace = inputsRowFlex;
+				workspace.inputSpace.add = addInput;
+				workspace.inputSpace.addInput = addInputToInputSpace;
+				
+				workspace.hide = function() {
+					workspaceWrapper.style.display = "none";
+				}
+				
+				workspace.show = function() {
+					workspaceWrapper.style.display = "block";
+				}
+				
+				workspace.rename = function(newName) {
+					name = newName;
+					workspaceName.innerHTML = name;
+				}
+				
+				workspace.addInput = addInputToInputSpace;
+				workspace.addOutput = addOutputToOutputSpace;
+				
+				addOutput.onclick = addOutputToOutputSpace;
+				addInput.onclick = addInputToInputSpace;
+				
+				workspaces.push(workspace);
+				
+				var components = [];
+				var inputs = [];
+				var outputs = [];
+				
+				workspace.addComponent = function(component) {
+					components.push(component);
+					workspace.appendChild(component);
+					workspace.componentTab.saveData.componentBlocks.push(component.saveData);
+					//console.log(component);
+				}
+				
+				workspace.removeComponent = function(component) {
+					let i = components.indexOf(component);
+					components.forEach(function(comp) {
+						comp.saveData.inputs.forEach(function(input) {
+							if (typeof input.compIndex !== "number")
+								return;
+							if (input.compIndex > i)
+								input.compIndex--;
+						});
+					});
+					workspace.componentTab.saveData.componentBlocks.splice(i, 1);
+					outputs.forEach(function(output) {
+						if (typeof output.saveData.compIndex !== "number")
+							return;
+						if (output.saveData.compIndex > i)
+							output.saveData.compIndex--;
+					});
+					component.deleteConnections();
+					purge(component);
+					components.splice(i, 1);
+					document.removeEventListener("mouseup", component.mouseup);
+					document.removeEventListener("mousemove", component.mousemove);
+					workspace.removeChild(component);
+				}
+				
+				workspace.componentIndex = function(component) {
+					return components.indexOf(component);
+				}
+				
+				workspace.updateComponentCostumes = function() {
+					components.forEach(function(component) {
+						component.updateCostume();
+					});
+				}
+				
+				var internalComponent = customComponent.getInstance(name, 0, 0);
+				
+				Object.defineProperty(workspace, "inputs", {get() {return inputs}});
+				Object.defineProperty(workspace, "outputs", {get() {return outputs}});
+				Object.defineProperty(workspace, "internalComponent", {get() {return internalComponent}});
+				
+				return workspace;
+			}
+			
+			// Returns an input object
+			function createInput() {
+				var input = document.createElement("div");
+				var columnFlex = document.createElement("div");
+				var node = createSVGCircle();
+				var label = document.createElement("div");
+				var checkbox = document.createElement("input");
+				
+				var workspace = workspaces.current;
+				input.workspace = workspace;
+				
+				input.className = "input";
+				columnFlex.className = "columnFlex";
+				label.className = "label";
+				label.innerHTML = "0";
+				checkbox.type = "checkbox";
+				
+				columnFlex.appendChild(node);
+				columnFlex.appendChild(label);
+				columnFlex.appendChild(checkbox);
+				input.appendChild(columnFlex);
+				
+				checkbox.addEventListener("change", function(e) {
+					let that = this;
+					label.innerHTML = Number(that.checked).toString();
+					if (that.checked)
+						node.circle.setAttribute("stroke", "blue");
+					else
+						node.circle.setAttribute("stroke", "black");
+					internalComponent.setState(that.checked);
+					input.updateCostume();
+					workspace.updateComponentCostumes();
+				});
+				
+				////////////////////////////////////////////////////////////////////////////////////////
+				let connections = [];
+				
+				input.getPosition = function() {
+					var rect = node.getBoundingClientRect();
+					var wRect = workspace.getBoundingClientRect();
+					var x = rect.x - wRect.x + 9;
+					var y = rect.y - wRect.y;
+					
+					return {x: x, y: y};
+				}
+				
+				input.addConnection = function(connection) {
+					connections.push(connection);
+					connection.setInputNode(input);
+					//console.log(connection.internalComponent.inputs, connection.inputIndex);
+					if (connection.customOutput)
+						workspace.internalComponent.connectInputTo(workspace.internalComponent.outputBuffer[connection.outputIndex], inputIndex);
+					else
+						workspace.internalComponent.connectInputTo(connection.internalComponent.inputs[connection.inputIndex], inputIndex);
+				}
+				
+				input.removeConnection = function(connection) {
+					connection.path.updateBottom(connection.getPosition());
+					connections.splice(connections.indexOf(connection), 1);
+					connection.setInputNode(null);
+					if (connection.customOutput)
+						workspace.internalComponent.connectInputTo(workspace.internalComponent.outputBuffer[connection.outputIndex], null);
+					else
+						workspace.internalComponent.connectInputTo(connection.internalComponent.inputs[connection.inputIndex], null);
+				}
+				
+				input.removeAllConnections = function() {
+					while (connections.length > 0) {
+						let connection = connections[0]
+						input.removeConnection(connection);
+						connection.updateCostume(false);
+						updateTop(connection.internalComponent);
+					}
+					workspace.updateComponentCostumes();
+				}
+					
+				node.addEventListener("mouseenter", function() {
+					mouse.overOutputNode = input;
+				});
+				
+				node.addEventListener("mouseleave", function() {
+					mouse.overOutputNode = null;
+				});
+				////////////////////////////////////////////////////////////////////////////////////////
+				
+				input.updateCostume = function() {
+					connections.forEach(function(connection) {
+						connection.updateCostume(checkbox.checked);
+					});
+				}
+				
+				//workspace.addComponent(input);
+				
+				workspace.internalComponent.addNewInput();
+				let internalComponent = toggleable.getInstance();
+				let inputIndex = workspace.internalComponent.inputs.length - 1;
+				workspace.internalComponent.inputs[inputIndex].setInput(internalComponent, 0);
+				
+				Object.defineProperty(input, "internalComponent", {get() {return internalComponent}});
+				Object.defineProperty(input, "inputIndex", {get() {return inputIndex}});
+				Object.defineProperty(input, "customInput", {get() {return true}});
+				Object.defineProperty(input, "outputs", {get(){return [input]}});
+				
+				return input;
+			}
+			
+			// Returns an output object
+			function createOutput() {
+				var output = document.createElement("div");
+				var columnFlex = document.createElement("div");
+				var node = createSVGCircle();
+				var triangle = createSVGTriangle();
+				var label = document.createElement("div");
+				
+				var workspace = workspaces.current;
+				output.workspace = workspace;
+				
+				output.className = "output";
+				columnFlex.className = "columnFlex";
+				label.className = "label";
+				label.innerHTML = "0";
+				
+				columnFlex.appendChild(label);
+				columnFlex.appendChild(node);
+				columnFlex.appendChild(triangle);
+				output.appendChild(columnFlex);
+				
+				////////////////////////////////////////////////////////////////////////////////////////
+				let path = createConnectionPath();
+				
+				let inputNode = null;
+				
+				// Event listener to stop propagation to dragging script
+				triangle.addEventListener("mousedown", function(e) {
+					e.stopPropagation();
+					path.updateTop(output.getPosition());
+					path.updateBottom(output.getPosition());
+					mouse.current = output;
+					if (inputNode !== null) {
+						inputNode.removeConnection(output);
+					}
+					output.updateCostume(false);
+					//workspace.updateInternalElements();
+					updateTop(output.internalComponent);
+					workspace.updateComponentCostumes();
+				});
+				
+				output.getPosition = function() {
+					var rect = triangle.getBoundingClientRect();
+					var wRect = workspace.getBoundingClientRect();
+					var x = rect.x - wRect.x + 9;
+					var y = rect.y - wRect.y + 12;
+					
+					return {x: x, y: y};
+				}
+				
+				output.setInputNode = function(node) {
+					inputNode = node;
+					if (node === null) {
+						workspace.internalComponent.connectOutputTo(null, 0, outputIndex);
+						saveData.name = null;
+						saveData.compIndex = null;
+						saveData.input = false;
+						saveData.outputIndex = null;
+					} else {
+						if (!node.customInput) {
+							workspace.internalComponent.connectOutputTo(node.internalComponent, node.outputIndex, outputIndex);
+							saveData.name = node.componentBlock.name;
+							saveData.compIndex = workspace.componentIndex(node.componentBlock);
+							saveData.input = false;
+							saveData.outputIndex = node.outputIndex;
+						} else {
+							saveData.name = null;
+							saveData.compIndex = node.inputIndex;
+							saveData.input = true;
+							saveData.outputIndex = null;
+						}
+					}
+				}
+				
+				output.updateCostume = function(on) {
+					node.setCostume(on);
+					triangle.setCostume(on);
+					path.setCostume(on);
+					label.innerHTML = Number(on);
+				}
+				
+				Object.defineProperty(output, "inputNode", {get() {return inputNode}});
+				output.path = path;
+				
+				workspaces.current.appendChild(path);
+				////////////////////////////////////////////////////////////////////////////////////////
+				
+				workspace.internalComponent.addNewOutput();
+				let internalComponent = workspace.internalComponent.outputBuffer.last;
+				let outputIndex = workspace.internalComponent.outputBuffer.length - 1;
+				
+				output.connectInputTo = function(comp, outputIndex, inputIndex) {
+					let input = output;
+					let outputNode = comp.outputs[outputIndex];
+					
+					input.path.updateTop(input.getPosition());
+					input.path.updateBottom(outputNode.getPosition());
+					outputNode.addConnection(input);
+					updateTop(outputNode.internalComponent);
+					workspaces.current.updateComponentCostumes();
+				}
+				
+				Object.defineProperty(output, "internalComponent", {get() {return internalComponent}});
+				Object.defineProperty(output, "outputIndex", {get() {return outputIndex}});
+				Object.defineProperty(output, "customOutput", {get() {return true}});
+			
+				/*********************************** Save Data ***********************************/
+				var saveData = Object.create(null);
+				saveData.name = null;
+				saveData.compIndex = null;
+				saveData.input = false;
+				saveData.outputIndex = null;
+				output.saveData = saveData;
+			
+				return output;
+			}
+		
+			function createConnectionPath() {
+				var connectionPath = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+				var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+				
+				var topX = 0, topY = 0, bottomX = 0, bottomY = 0;
+				
+				connectionPath.setAttribute("class", "connectionPath");
+				connectionPath.style.pointerEvents = "none";
+				path.setAttribute("stroke", "black");
+				path.setAttribute("stroke-width", "2");
+				
+				connectionPath.appendChild(path);
+				
+				function updateTop(pos) {
+					topX = pos.x;
+					topY = pos.y;
+					update();
+				}
+				
+				function updateBottom(pos) {
+					bottomX = pos.x;
+					bottomY = pos.y;
+					update();
+				}
+				
+				function update() {
+					var width = topX - bottomX;
+					var height = topY - bottomY;
+					var cWidth = Math.abs(topX - bottomX) + 4;
+					var cHeight = Math.abs(topY - bottomY) + 4;
+					var trueTopX = topX < bottomX ? topX : bottomX;
+					var trueTopY = topY < bottomY ? topY : bottomY;
+					trueTopX -= 2;
+					trueTopY -= 2;
+					
+					connectionPath.style.left = (trueTopX + connectionPath.parentNode.offsetLeft) + "px";
+					connectionPath.style.top = (trueTopY + connectionPath.parentNode.offsetTop) + "px";
+					connectionPath.setAttribute("width", cWidth.toString() + "px");
+					connectionPath.setAttribute("height", cHeight.toString() + "px");
+					
+					if (width > 0 && height > 0) {
+						path.setAttribute("d", "M2 2 L" + (width + 2) + " " + (height + 2));
+					} else if (width < 0 && height > 0) {
+						path.setAttribute("d", "M" + (-width + 2) + " 2 L2 " + (height + 2));
+					} else if (width > 0 && height < 0) {
+						path.setAttribute("d", "M2 " + (-height + 2) + " L" + (width + 2) + " 2");
+					} else {
+						path.setAttribute("d", "M" + (-width + 2) + " " + (-height + 2) + " L2 2");
+					}
+				}
+				
+				connectionPath.setCostume = function(on) {
+					if (on)
+						path.setAttribute("stroke", "blue");
+					else
+						path.setAttribute("stroke", "black");
+				}
+				
+				connectionPath.updateTop = updateTop;
+				connectionPath.updateBottom = updateBottom;
+				
+				return connectionPath;
+			}
+		
+			// Returns an svg element with a circle drawn in it
+			function createSVGCircle() {
+				var node = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+				node.setAttribute("class", "node");
+				
+				var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+				circle.setAttribute("cx", "9");
+				circle.setAttribute("cy", "9");
+				circle.setAttribute("r", "8");
+				circle.setAttribute("stroke", "black");
+				circle.setAttribute("fill", "white");
+				circle.setAttribute("stroke-width", "2");
+				
+				node.circle = circle;
+				node.appendChild(circle);
+				
+				node.setCostume = function(on) {
+					if (on)
+						circle.setAttribute("stroke", "blue");
+					else
+						circle.setAttribute("stroke", "black");
+				}
+				
+				return node;
+			}
+			
+			// Returns an svg element with a triangle drawn in it
+			function createSVGTriangle() {
+				var node = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+				node.setAttribute("class", "triangle");
+					
+				var triangle = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+				triangle.setAttribute("points", "2,10 14,10 8,2");
+				triangle.setAttribute("stroke", "black");
+				triangle.setAttribute("fill", "white");
+				triangle.setAttribute("stroke-width", "2");
+					
+				node.appendChild(triangle);
+				
+				node.setCostume = function(on) {
+					if (on)
+						triangle.setAttribute("stroke", "blue");
+					else
+						triangle.setAttribute("stroke", "black");
+				}
+				
+				return node;
+			}
+		
+			var mouse = {overOutputNode: null, current: null};
+		
+			document.addEventListener("mousemove", function(e) {
+				if (mouse.current !== null) {
+					var rect = workspaces.current.getBoundingClientRect();
+					var x = e.clientX - rect.x;
+					var y = e.clientY - rect.y;
+					mouse.current.path.updateBottom({x: x, y: y});
+				}
+			});
+			
+			document.addEventListener("mouseup", function() {
+				if (mouse.current !== null) {
+					if (mouse.overOutputNode !== null) {
+						mouse.current.path.updateBottom(mouse.overOutputNode.getPosition());
+						mouse.overOutputNode.addConnection(mouse.current);
+						//workspaces.current.updateInternalElements();
+						updateTop(mouse.overOutputNode.internalComponent);
+						workspaces.current.updateComponentCostumes();
+					} else {
+						mouse.current.path.updateBottom(mouse.current.getPosition());
+					}
+				}
+				
+				mouse.current = null;
+			});
+		
+			// Returns a componentBlock named *name* and with *inputs* inputs, *outputs* outputs, and with *workspace* as its workspace
+			function createComponentBlock(name, inputs, outputs, workspace, parentWorkspace) {
+				// Creates outer div
+				var componentBlock = document.createElement("div");
+				
+				// Inner flex column div to hold each part of the component block
+				var spanSandwich = document.createElement("div");
+				
+				// Holds output nodes in a flex row div
+				var outputNodesWrapper = document.createElement("div");
+				var outputNodes = document.createElement("div");
+				
+				// Contains the name of the component block
+				var span = document.createElement("span");
+				
+				// Holds input nodes in a flex row div
+				var inputNodesWrapper = document.createElement("div");
+				var inputNodes = document.createElement("div");
+				
+				// Holds input triangles in a flex row div
+				var inputTrianglesWrapper = document.createElement("div");
+				var inputTriangles = document.createElement("div");
+				
+				// Sets class names and other attributes
+				componentBlock.className = "component";
+				spanSandwich.className = "columnFlex";
+				outputNodesWrapper.className = "componentNodes";
+				outputNodes.className = "rowFlex";
+				span.className = "componentLabel";
+				span.innerHTML = name;
+				inputNodesWrapper.className = "componentNodes";
+				inputNodes.className = "rowFlex";
+				inputTrianglesWrapper.className = "inputTriangles";
+				inputTriangles.className = "rowFlex";
+				
+				/*********************************** Save Data ***********************************/
+				var saveData = Object.create(null);
+				saveData.name = name;
+				saveData.x = 0;
+				saveData.y = 60;
+				saveData.inputs = [];
+				componentBlock.saveData = saveData;
+				/************************************** End **************************************/
+				
+				var outs = [];
+				var connections = [];
+				
+				function addOutput(i) {
+					let outputIndex = i;
+					let node = createSVGCircle();
+					let connections = [];
+					
+					node.getPosition = function() {
+						var rect = node.getBoundingClientRect();
+						var wRect = workspace.getBoundingClientRect();
+						var x = rect.x - wRect.x + 9;
+						var y = rect.y - wRect.y;
+						
+						return {x: x, y: y};
+					}
+					
+					node.addConnection = function(connection) {
+						connections.push(connection);
+						connection.setInputNode(node);
+						if (!connection.customOutput)
+							connection.internalComponent.inputs[connection.inputIndex].setInput(internalComponent, outputIndex);
+					}
+					
+					node.removeConnection = function(connection) {
+						connection.path.updateBottom(connection.getPosition());
+						connections.splice(connections.indexOf(connection), 1);
+						connection.setInputNode(null);
+						if (!connection.customOutput)
+							connection.internalComponent.inputs[connection.inputIndex].setInput(null, 0);
+					}
+					
+					node.removeAllConnections = function() {
+						while (connections.length > 0) {
+							let connection = connections[0]
+							node.removeConnection(connection);
+							connection.updateCostume(false);
+							updateTop(connection.internalComponent);
+						}
+						workspace.updateComponentCostumes();
+					}
+					
+					node.addEventListener("mouseenter", function() {
+						mouse.overOutputNode = node;
+					});
+					
+					node.addEventListener("mouseleave", function() {
+						mouse.overOutputNode = null;
+					});	
+					
+					node.updateConnections = function() {
+						connections.forEach(function(connection) {
+							connection.path.updateBottom(node.getPosition());
+						}); 
+					}
+					
+					node.updateCostume = function(on) {
+						node.setCostume(on);
+						connections.forEach(function(connection) {
+							connection.updateCostume(on);
+						});
+					}
+					
+					Object.defineProperty(node, "internalComponent", {get() {return internalComponent}});
+					Object.defineProperty(node, "outputIndex", {get() {return outputIndex}});
+					Object.defineProperty(node, "customInput", {get() {return false}});
+					Object.defineProperty(node, "componentBlock", {get() {return componentBlock}});
+					
+					outs.push(node);
+					
+					outputNodes.appendChild(node);
+				}
+				
+				function addInput(i) {
+					let inputIndex = i;
+					let node = createSVGCircle();
+					let triangle = createSVGTriangle();
+					let path = createConnectionPath();
+					
+					let inputNode = null;
+					
+					// Event listener to stop propagation to dragging script
+					triangle.addEventListener("mousedown", function(e) {
+						e.stopPropagation();
+						path.updateTop(triangle.getPosition());
+						path.updateBottom(triangle.getPosition());
+						mouse.current = triangle;
+						if (inputNode !== null) {
+							inputNode.removeConnection(triangle);
+						}
+						triangle.updateCostume(false);
+						updateTop(triangle.internalComponent);
+						workspace.updateComponentCostumes();
+					});
+					
+					triangle.getPosition = function() {
+						var rect = triangle.getBoundingClientRect();
+						var wRect = workspace.getBoundingClientRect();
+						var x = rect.x - wRect.x + 9;
+						var y = rect.y - wRect.y + 11;
+						
+						return {x: x, y: y, triangle: triangle};
+					}
+					
+					triangle.setInputNode = function(node) {
+						inputNode = node;
+						
+						if (node === null) {
+							saveData.name = null;
+							saveData.compIndex = null;
+							saveData.input = false;
+							saveData.outputIndex = null;
+						} else {
+							if (!node.customInput) {
+								saveData.name = node.componentBlock.name;
+								saveData.compIndex = workspace.componentIndex(node.componentBlock);
+								saveData.input = false;
+								saveData.outputIndex = node.outputIndex;
+							} else {
+								saveData.name = null;
+								saveData.compIndex = node.inputIndex;
+								saveData.input = true;
+								saveData.outputIndex = null;
+							}
+						}
+						//internalComponent.inputs[inputIndex].setInput(node.internalComponent, node.outputIndex);
+					}
+					
+					triangle.updateCostume = function(on) {
+						//console.log(on);
+						node.setCostume(on);
+						triangle.setCostume(on);
+						path.setCostume(on);
+					}
+					
+					Object.defineProperty(triangle, "inputNode", {get() {return inputNode}});
+					Object.defineProperty(triangle, "inputIndex", {get() {return inputIndex}});
+					Object.defineProperty(triangle, "internalComponent", {get() {return internalComponent}});
+					Object.defineProperty(triangle, "customOutput", {get() {return false}});
+					
+					connections.push(triangle);
+					
+					triangle.path = path;
+					
+					inputNodes.appendChild(node);
+					inputTriangles.appendChild(triangle);
+					workspace.appendChild(path);
+					
+					/*********************************** Save Data ***********************************/
+					var saveData = Object.create(null);
+					saveData.name = null;
+					saveData.input = false;
+					saveData.compIndex = null;
+					saveData.outputIndex = null;
+					
+					componentBlock.saveData.inputs.push(saveData);
+				}
+				
+				// Creates and adds svg circles to output nodes
+				for (var i = 0; i < outputs; i++) {
+					addOutput(i);
+				}
+				
+				// Creates and adds svg circles and triangles to input nodes and input triangles
+				for (var i = 0; i < inputs; i++) {
+					addInput(i);
+				}
+				
+				componentBlock.addOutput = function() {addOutput(); updatePaths()};
+				componentBlock.addInput = function() {addInput(); updatePaths()};
+				
+				// Creates structure of component block
+				outputNodesWrapper.appendChild(outputNodes);
+				inputNodesWrapper.appendChild(inputNodes);
+				inputTrianglesWrapper.appendChild(inputTriangles);
+				spanSandwich.appendChild(outputNodesWrapper);
+				spanSandwich.appendChild(span);
+				spanSandwich.appendChild(inputNodesWrapper);
+				spanSandwich.appendChild(inputTrianglesWrapper);
+				componentBlock.appendChild(spanSandwich);
+				
+				// Reference to the block's workspace
+				componentBlock.workspace = workspace;
+				
+				componentBlock.style.left = "0px";
+				componentBlock.style.top = "60px";
+				
+				function updatePaths() {
+					outs.forEach(function(out) {
+						out.updateConnections();
+					});
+					
+					connections.forEach(function(connection, i) {
+						connection.path.updateTop(connection.getPosition());
+						if (connection.inputNode === null) {
+							connection.path.updateBottom(connection.getPosition());
+						}
+					});
+				}
+				
+				componentBlock.updatePaths = updatePaths;
+				
+				componentBlock.deleteConnections = function() {
+					connections.forEach(function(connection) {
+						if (connection.inputNode !== null) {
+							connection.inputNode.removeConnection(connection);
+						}
+						connection.path.parentNode.removeChild(connection.path);
+						connection = null;
+					});
+					
+					outs.forEach(function(out) {
+						out.removeAllConnections();
+					});
+				}
+				
+				componentBlock.rename = function(newName) {
+					workspace.componentTab.saveData.componentBlocks.forEach(function(comp) {
+						comp.inputs.forEach(function(input) {
+							if (input.name === name)
+								input.name = newName;
+						});
+					});
+					
+					workspace.componentTab.saveData.outputs.forEach(function(output) {
+							if (output.name === name)
+								output.name = newName;
+					});
+				
+					span.innerHTML = newName;
+					name = newName;
+					
+					saveData.name = newName;
+					
+					updatePaths();
+				}
+				
+				componentBlock.updatePos = function(x, y) {
+					componentBlock.style.left = x + "px";
+					componentBlock.style.top = y + "px";
+						
+					saveData.x = x;
+					saveData.y = y;
+						
+					componentBlock.updatePaths();
+				}
+				
+				componentBlock.getPosition = function() {
+					return {x: parseInt(componentBlock.style.left), y: parseInt(componentBlock.style.top)};
+				}
+				
+				// Makes the block draggable once it has been added to the DOM
+				function callback(mutationsList) {
+					function onMousedown() {
+						componentBlock.style.pointerEvents = "none";
+					}
+					function onMouseup(x, y) {
+						let parent = componentBlock.parentNode;
+						let width = componentBlock.offsetWidth + 2;
+						let height = spanSandwich.offsetHeight - 4;
+							
+						if (overTrash) {
+							componentBlock.workspace.removeComponent(componentBlock);
+							return;
+						}
+							
+						componentBlock.style.pointerEvents = "all";
+						
+						if (x < 0)
+							x = 0;
+						
+						if (y < height)
+							y = height;
+						
+						if (x > parent.offsetWidth - width)
+							x = parent.offsetWidth - width;
+						
+						if (y > parent.offsetHeight)
+							y = parent.offsetHeight;
+						
+						componentBlock.updatePos(x, y);
+					}
+					draggable(componentBlock, componentBlock.updatePos, onMousedown, onMouseup);
+					observer.disconnect();
+				};
+				
+				// MutationObserver, triggered when the block is added to the DOM
+				var observer = new MutationObserver(callback);
+				observer.observe(workspace, {childList: true});
+				
+				var internalComponent;
+				if (parentWorkspace === undefined)
+					internalComponent = nand.getInstance();
+				else
+					internalComponent = parentWorkspace.internalComponent.getInstance();
+				
+				function updateCostume() {
+					var outputs = internalComponent.lastOutputs;
+					outs.forEach(function(out, i) {
+						out.updateCostume(outputs[i]);
+					});
+				}
+				
+				componentBlock.updateCostume = updateCostume;
+				
+				componentBlock.connectInputTo = function(comp, outputIndex, inputIndex) {
+					let input = connections[inputIndex];
+					let outputNode = comp.outputs[outputIndex];
+					
+					input.path.updateBottom(outputNode.getPosition());
+					outputNode.addConnection(input);
+					updateTop(outputNode.internalComponent);
+					workspaces.current.updateComponentCostumes();
+				}
+				
+				internalComponent.outputs;
+				updateCostume();
+				
+				Object.defineProperty(componentBlock, "internalComponent", {get(){return internalComponent}});
+				Object.defineProperty(componentBlock, "outputs", {get(){return outs}});
+				Object.defineProperty(componentBlock, "inputs", {get(){return connections}});
+				Object.defineProperty(componentBlock, "name", {get(){return name}});
+				
+				return componentBlock;
+			}
+			
+			// Handles detecting when the mouse is over the trash can
+			var overTrash = false;
+			document.getElementsByClassName("trash")[0].addEventListener("mouseenter", function(){overTrash = true; this.className = "trashHover";}, true);
+			document.getElementsByClassName("trash")[0].addEventListener("mouseleave", function(){overTrash = false; this.className = "trash";}, true);
+			
+			// Makes a div draggable
+			/*function draggable(div, confineToParent = true, width, height) {
+				var mousePosition;
+				var offset = [0, 0];
+				var isDown = false; // Flag for the mousemove callback to start dragging
+				var rect = div.getBoundingClientRect();
+				var parent = div.parentNode;
+				
+				if (width === undefined)
+					width = rect.width;
+				
+				if (height === undefined)
+					height = rect.height;
+				
+				// Detects when the div has been clicked on to initiate dragging
+				function mousedown(e) {
+					e.stopPropagation();
+					//console.log(e, this);
+					
+					isDown = true;
+					offset = [
+						div.offsetLeft - e.clientX,
+						div.offsetTop - e.clientY
+					];
+					
+					div.style.pointerEvents = "none";
+				}
+				
+				// Detects when the div is released to stop dragging
+				function mouseup() {
+					if (isDown) {
+						if (overTrash) {
+							div.workspace.removeComponent(div);
+							return;
+						}
+						
+						// Prevents div from going outside the bounds of its parent element
+						var trueX = parseInt(div.style.left), trueY = parseInt(div.style.top);
+						
+						if (confineToParent) {
+							if (trueX < 0)
+								trueX = 0;
+								
+							if (trueY < height)
+								trueY = height;
+								
+							if (trueX > parent.offsetWidth - width)
+								trueX = parent.offsetWidth - width;
+								
+							if (trueY > parent.offsetHeight)
+								trueY = parent.offsetHeight;
+						}
+						
+						// Sets the div's new position
+						div.style.left = (trueX) + "px";
+						div.style.top = (trueY) + "px";
+						
+						div.updatePaths();
+						
+						div.style.pointerEvents = "all";
+					}
+					isDown = false;
+				}
+				
+				// Detects mouse movement to perform the dragging action
+				function mousemove(e) {
+					e.preventDefault();
+					if (isDown) {
+						mousePosition = {
+							x: e.clientX,
+							y: e.clientY
+						};
+						
+						// Calculated x and y for the div
+						var trueX = mousePosition.x + offset[0], trueY = mousePosition.y + offset[1];
+						
+						//console.log(trueX, trueY, height);
+						
+						// Sets the div's new position
+						div.style.left = (trueX) + "px";
+						div.style.top = (trueY) + "px";
+						
+						div.updatePaths();
+					}
+				}
+				
+				div.mouseup = mouseup;
+				div.mousemove = mousemove;
+				
+				div.addEventListener("mousedown", mousedown); // Detects clicks on div
+				document.addEventListener("mouseup", mouseup); // Added to document in case mouse is separated from the div
+				document.addEventListener("mousemove", mousemove); // Detects mouse movement on the entire document
+			}*/
+		
+			var backpack = document.getElementById("backpack");
+			backpack.tabs = []; // Keeps track of tabs that have been added
+			backpack.options = document.getElementById("backpackOptions");
+			backpack.options.addComponent = document.getElementById("addComponent"); // Gets the add button in the backpack options
+			backpack.options.settings = backpackOptions.getElementsByClassName("settings")[0]; // Gets he settings button in the backpack options
+			backpack.options.addComponent.onclick = addComponent;
+			
+			// Creates and adds a component tab to the backpack
+			function addComponent() {
+				swal("Add component:", {
+					content: "input",
+					buttons: true
+				})
+				.then(function(name) {
+					if (name === null)
+						return;
+					
+					if (name === "")
+						name = undefined;
+					
+					// Checks to make sure the given name is not in use
+					
+					if (!nameInUse(name)) {
+						initComponent(name);
+					} else {
+						swal("The name " + name + " is already in use");
+					}
+				});
+			}
+			
+			// Checks if a name is already taken by another component
+			function nameInUse(name) {
+				return backpack.tabs.find(function(tab) {
+					return tab.name === name;
+				}) !== undefined;
+			}
+			
+			// Creates and returns an add button
+			function createAddButton() {
+				var addDiv = document.createElement("div");
+				var vertical = document.createElement("div");
+				var horizontal = document.createElement("div");
+				
+				addDiv.className = "add";
+				vertical.className = "vertical";
+				horizontal.className = "horizontal";
+				
+				addDiv.appendChild(vertical);
+				addDiv.appendChild(horizontal);
+				
+				return addDiv;
+			}
+			
+			// Creates and returns a delete button
+			function createDeleteButton() {
+				var deleteDiv = document.createElement("div");
+				var pos = document.createElement("div");
+				var neg = document.createElement("div");
+				
+				deleteDiv.className = "del";
+				pos.className = "pos";
+				neg.className = "neg";
+				
+				deleteDiv.appendChild(pos);
+				deleteDiv.appendChild(neg);
+				
+				return deleteDiv;
+			}
+			
+			// Creates and returns a rename button
+			function createRenameButton() {
+				var rename = document.createElement("div");
+				var renIcon = document.createElement("div");
+				
+				renIcon.innerHTML = "R";
+				
+				rename.className = "rename";
+				renIcon.className = "renIcon";
+				
+				rename.appendChild(renIcon);
+				
+				return rename;
+			}
+		
+			// Creates and returns a componentTab
+			function createComponentTab(name, nand = false) {
+				var componentTab = document.createElement("div"); // Div to hold everything
+				var rowFlex = document.createElement("div"); // Row flex to handle positioning
+				var compName = document.createElement("span"); // Span to hold the component's name
+				var buttonDiv = document.createElement("div"); // Div to hold buttons
+				var add = createAddButton(); // Add button
+				var del = createDeleteButton(); // Del button
+				var rename = createRenameButton(); // Rename button
+				
+				// Sets class names and other attributes
+				componentTab.className = "componentTab";
+				rowFlex.className = "rowFlex";
+				buttonDiv.className = "rowFlex";
+				compName.className = "compName";
+				if (nand)
+					compName.id = "nandName";
+				compName.innerHTML = name;
+				if (nand)
+					buttonDiv.setAttribute("id", "nandButtonDiv");
+				
+				// Appends children as necessary
+				buttonDiv.appendChild(add);
+				if (!nand) {
+					buttonDiv.appendChild(rename);
+					buttonDiv.appendChild(del);
+				}
+				rowFlex.appendChild(compName);
+				rowFlex.appendChild(buttonDiv);
+				componentTab.appendChild(rowFlex);
+				
+				// Stores parts of the tab in the componentTab object for later use
+				componentTab.compName = compName;
+				componentTab.add = add;
+				componentTab.del = del;
+				componentTab.rename = rename;
+				Object.defineProperty(componentTab, "name", {get(){return name}});
+				//componentTab.name = name;
+				
+				// Renames the component tab
+				function renameComponent() {
+					swal("Rename component:", {
+						content: "input",
+						buttons: true
+					})
+					.then(function(newName) {
+						if (newName === "" || newName === null)
+							return;
+						
+						if (!nameInUse(newName)) {
+							//currentSave.renameTab(componentTab, newName);
+							saveData.name = newName;
+							compName.innerHTML = newName;
+							name = newName;
+							componentTab.workspace.rename(newName);
+							renameInstances(newName);
+						} else {
+							swal("The name " + newName + " is already in use");
+						}
+					});
+				}
+				
+				function renameInstances(newName) {
+					componentInstances.forEach(function(comp) {
+						comp.rename(newName);
+					});
+				}
+				
+				function deleteInstances() {
+					componentInstances.forEach(function(comp) {
+						comp.workspace.removeComponent(comp);
+					});
+					
+					componentInstances = [];
+				}
+				
+				function addInputToInstances() {
+					componentInstances.forEach(function(comp) {
+						comp.addInput();
+					});
+				}
+				
+				function addOutputToInstances() {
+					componentInstances.forEach(function(comp) {
+						comp.addOutput();
+					});
+				}
+				
+				componentTab.addInputToInstances = addInputToInstances;
+				componentTab.addOutputToInstances = addOutputToInstances;
+				
+				// Deletes the component tab
+				function deleteComponentTab() {
+					swal({
+						text: "Are you sure you want to delete this component?",
+						icon: "warning",
+						buttons: true,
+						dangerMode: true
+					})
+					.then(function(value) {
+						if (value) {
+							deleteComponent(componentTab);
+							currentSave.data.splice(currentSave.data.indexOf(saveData), 1);
+						}
+					});
+				}
+				
+				function selectComponent() {
+					workspaces.select(componentTab.workspace);
+				}
+				
+				var componentInstances = [];
+				
+				componentTab.addComponentToWorkspace = addComponentToWorkspace;
+				function addComponentToWorkspace() {
+					if (componentTab.workspace === workspaces.current)
+						return;
+					
+					var component;
+					if (componentTab === nandTab) {
+						component = createComponentBlock("nand", 2, 1, workspaces.current, componentTab.workspace);
+						componentInstances.push(component);
+						workspaces.current.addComponent(component);
+					} else {
+						component = createComponentBlock(name, componentTab.workspace.inputs.length, componentTab.workspace.outputs.length, workspaces.current, componentTab.workspace);
+						componentInstances.push(component);
+						workspaces.current.addComponent(component);
+					}
+					return component;
+				}
+				
+				componentTab.deleteInstances = deleteInstances;
+				
+				// Sets onclick listeners
+				rename.onclick = renameComponent;
+				del.onclick = deleteComponentTab;
+				if (!nand)
+					compName.onclick = selectComponent;
+				add.onclick = addComponentToWorkspace;
+				
+				backpack.tabs.push(componentTab);
+				
+				if (nand)
+					return componentTab;
+				
+				/*********************************** Save Data ***********************************/
+				var saveData = Object.create(null);
+				saveData.name = name;
+				saveData.outputs = [];
+				saveData.componentBlocks = [];
+				saveData.inputs = 0;
+				currentSave.data.push(saveData);
+				componentTab.saveData = saveData;
+				
+				return componentTab;
+			}
+			
+			function initComponent(name, nand = false) {
+				// Default name if name is not defined
+				if (name === undefined)
+					name = "comp" + (backpack.tabs.length);
+			
+				var componentTab = createComponentTab(name, nand);
+				
+				if (!nand) {
+					var componentWorkspace = createWorkspace(name);
+					componentTab.workspace = componentWorkspace;
+					componentWorkspace.componentTab = componentTab;
+					workspaces.select(componentWorkspace);
+					//currentSave.addTab(componentTab);
+				}
+				
+				backpack.appendChild(componentTab);
+				
+				return componentTab;
+			}
+			
+			function deleteComponent(componentTab) {
+				componentTab.deleteInstances();
+				componentTab.parentNode.removeChild(componentTab);
+				backpack.tabs.splice(backpack.tabs.indexOf(componentTab), 1);
+				/*backpack.tabs = backpack.tabs.filter(function(tab) {
+					return tab !== componentTab;
+				});*/
+				
+				if (workspaces.current === componentTab.workspace)
+					workspaces.select(workspaces.indexOf(componentTab.workspace) - 1);
+				
+				workspaces.delete(componentTab.workspace);
+			}
+			
+			var nandTab = initComponent("nand", true);
+			
+			initComponent();
+			
+			/************************************************************************Testing************************************************************************/
+			
+			var loadSave = document.getElementById("loadSave");
+			
+			loadSave.addEventListener("change", function(e) {
+				var file = e.target.files[0];
+				var fileReader = new FileReader();
+				var extension = file.name.match(/\.[0-9a-z]+$/i);
+				
+				fileReader.onload = function(e) {
+					if (extension[0] === ".json") {
+						load(fileReader.result);
+					} else {
+						var arrayBuffer = fileReader.result;
+						var dataView = new DataView(fileReader.result);
+						var bitArray = new BitArray(dataView);
+						var dcMsg = decompressFromBitArray(bitArray);
+						load(dcMsg);
+					}
+				};
+				
+				if (extension[0] === ".json")
+					fileReader.readAsText(file);
+				else
+					fileReader.readAsArrayBuffer(file);
+			});
+			
+			var save = document.getElementById("save");
+			
+			save.onclick = downloadSave;
+			
+			var d;
+			
+			function load(json) {
+				d = JSON.parse(json);
+				
+				currentSave.data = [];
+				
+				while (backpack.tabs.length !== 1)
+					deleteComponent(backpack.tabs[1]);
+				
+				//console.log(currentSave.data);
+				//console.log(backpack.tabs);
+				
+				// Creating component tabs
+				d.forEach(function(component, i) {
+					initComponent(component.name);
+					var currTab = backpack.tabs[1 + i];
+					
+					var inputs = [], outputs = [];
+					
+					// Add inputs and outputs
+					for (var j = 0; j < component.inputs; j++) {
+						inputs.push(currTab.workspace.addInput());
+					}
+					for (var j = 0; j < component.outputs.length; j++) {
+						outputs.push(currTab.workspace.addOutput());
+					}
+					
+					var components = [];
+					
+					// Add component blocks
+					component.componentBlocks.forEach(function(block) {
+						var blockTab = backpack.tabs.find(function(tab) {
+							return tab.name === block.name;
+						});
+						
+						var compBlock = blockTab.addComponentToWorkspace();
+						compBlock.updatePos(block.x, block.y);
+						components.push(compBlock);
+					});
+					
+					// Adding connections between component blocks
+					components.forEach(function(block, i) {
+						let blockData = component.componentBlocks[i];
+						
+						blockData.inputs.forEach(function(input, j) {
+							if (input.input === true) {
+								block.connectInputTo(inputs[input.compIndex], 0, j);
+							} else {
+								if (input.name === null)
+									return;
+								//block.connectInputTo(componentBlocks[input.name][input.compIndex], input.outputIndex, j);
+								block.connectInputTo(components[input.compIndex], input.outputIndex, j);
+							}
+						});
+					});
+					
+					component.outputs.forEach(function(output, j) {
+						let outputBlock = outputs[j]
+						if (output.input === true) {
+							outputBlock.connectInputTo(inputs[output.compIndex], 0, j);
+						} else {
+							if (output.name === null)
+								return;
+							
+							//outputBlock.connectInputTo(componentBlocks[output.name][output.compIndex], output.outputIndex, j);
+							outputBlock.connectInputTo(components[output.compIndex], output.outputIndex, j);
+						}
+					});
+				});
+			}
+			
+			function downloadSave() {
+				let bitArray = compressToBitArray(JSON.stringify(currentSave.data));
+				downloadBitArray(bitArray, "save.bin");
+			}
+			
+			if (localStorage.getItem("save") !== null) {
+				load(localStorage.getItem("save"));
+			}
+		</script>
+	</body>
+</html>

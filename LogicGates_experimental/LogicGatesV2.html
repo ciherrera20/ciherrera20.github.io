@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Logic Gates</title>
+		
+		<link rel="stylesheet" type="text/css" href="LogicGates.css">
+		
+		<script src="LogicGatesV2.js"></script>
+		<script src="Controller.js"></script>
+		<script src="sweetalert.min.js"></script>
+	</head>
+	
+	<body>
+		<div id="backpackWrapper" class="columnFlex">   
+			<span class="rowFlex">
+				<h2>Components</h2>
+			</span>
+			<div id="backpackOptions" class="rowFlex">
+				<div id="addComponent" class="add">
+					<div class="vertical"></div>
+					<div class="horizontal"></div>
+				</div>
+				<label class="button">Load Save
+					<input id="loadSave" class="inputs" type="file"></input>
+				</label>
+				<label class="button">Save
+					<input id="save" class="inputs" type="button"></input>
+				</label>
+				<div class="settings"></div>
+			</div>
+			<div id="backpack" class="columnFlex">
+			</div>
+			<div class="backpackFooter">
+				<div class="trash">
+				
+				</div>
+			</div>
+		</div>
+		<script>
+			backpack = document.getElementById("backpack");
+
+			let addComponent = document.getElementById("addComponent");
+			let mousePosition;
+			let offset = [0, 0];
+			let isDown = false;
+
+			addComponent.onclick = function() {
+				swal("Add component:", {
+					content: "input",
+					buttons: true
+				})
+				.then(function(name) {
+					if (!name)
+						return;
+					
+					// Checks to make sure the given name is not in use
+					let usedBy = nameInUse(name);
+					if (!usedBy) {
+						current.setComponent(new Component(name));
+					} else {
+						let gotoDef = document.createElement("u");
+						gotoDef.innerHTML = "Go to definition";
+						gotoDef.style.color = "blue";
+						gotoDef.onclick = function() {
+							current.setComponent(usedBy);
+							swal.close();
+						}
+					
+						let alert = {
+							title: "Duplicate Name",
+							text: "The name " + name + " is already in use",
+							icon: "warning"
+						};
+					
+						if (name !== "nand" && current.component !== usedBy)
+							alert.content = gotoDef;
+				
+						swal(alert);
+					}
+				});
+			}
+			new Component("nand", true);
+
+			document.addEventListener("mousedown", function(e) {
+				//console.log("document mouse down");
+				
+				if (!current.componentBlock)
+					return;
+
+				isDown = true;
+				offset = [
+					current.componentBlock.innerHTML.offsetLeft - e.clientX,
+					current.componentBlock.innerHTML.offsetTop - e.clientY
+				];
+			});
+
+			document.addEventListener("mouseup", function(e) {
+				//console.log("document mouse up");
+			
+				if (current.inputNode) {
+					if (current.outputNode)
+						current.inputNode.setInput(current.outputNode);
+					else
+						current.inputNode.path.updateBottom(current.inputNode.getPosition());
+				} else if (current.componentBlock) {
+					current.componentBlock.onMouseUp(e);
+				}
+				
+				current.setInputNode(undefined);
+				current.setComponentBlock(undefined);
+
+				/*if (isDown) {
+					mousePosition = {
+						x: e.clientX,
+						y: e.clientY
+					};
+
+					let trueX = mousePosition.x + offset[0], trueY = mousePosition.y + offset[1];
+				}*/
+			});
+
+			document.addEventListener("mousemove", function(e) {
+				mousePosition = {
+					x: e.clientX,
+					y: e.clientY
+				};
+
+				if (current.inputNode) {
+					current.inputNode.path.updateBottom(current.workspace.transformMousePos(mousePosition));
+				} else if (current.componentBlock) {
+					let trueX = mousePosition.x + offset[0], trueY = mousePosition.y + offset[1];
+					current.componentBlock.updatePos(trueX, trueY);
+				}
+			});
+
+			document.querySelector(".trash").addEventListener("mouseenter", function() {
+				current.overTrash = true;
+				this.className = "trashHover";
+			}, true);
+
+			document.querySelector(".trash").addEventListener("mouseleave", function() {
+				current.overTrash = false;
+				this.className = "trash";
+			}, true);
+		</script>
+	</body>
+</html>

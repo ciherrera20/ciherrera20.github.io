@@ -1,0 +1,474 @@
+body {
+	background-image: url("https://ciherrera20.github.io/images/LogicGates/Background.png");
+	-webkit-user-select: none;
+	user-select: none;
+	draggable: false;
+}
+
+.columnFlex {
+	display: flex;
+	flex-flow: column nowrap;
+	justify-content: flex-start;
+}
+
+.rowFlex {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: space-between;
+}
+
+#backpackWrapper {
+	position: absolute;
+	width: 250px;
+	height: 700px;
+	background-color: grey;
+	opacity: 0.9;
+	border: 2px solid black;
+	border-radius: 15px;
+}
+
+#backpackWrapper > span {
+	margin-top: -8px;
+	height: 58px;
+	justify-content: space-around;
+}
+
+#backpackOptions {
+	margin-left: -2px;
+	width: 236px;
+	height: 40px;
+	border: 2px solid black;
+	background-color: lightgrey;
+	justify-content: space-between;
+	padding-right: 14px;
+}
+
+#backpack {
+	margin-left: -2px;
+	margin-top: -3px;
+	border: 2px solid black;
+	width: 249.5px;
+	height: 555px;
+	background-color: white;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	z-index: -1;
+}
+
+.backpackFooter {
+	width: 249.5px;
+	height: 50px;
+}
+
+.trash, .trashHover {
+	margin-top: 5px;
+	margin-right: 10px;
+	width: 35px;
+	height: 35px;
+	background-image: url("https://ciherrera20.github.io/images/LogicGates/trash.png");
+	background-size: 35px 35px;
+	float: right;
+}
+
+.trashHover {
+	margin-top: 4px;
+	margin-right: 9px;
+	width: 37px;
+	height: 37px;
+	background-size: 37px 37px;
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: #f1f1f1; 
+}
+
+::-webkit-scrollbar-thumb {
+	background: #aaa; 
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #555; 
+}
+
+.add {
+	margin-top: 5px;
+	margin-left: 5px;
+	min-width: 25px;
+	max-width: 25px;
+	height: 25px;
+	border: 2px solid grey;
+	background-color: white;
+	border-radius: 5px;
+	cursor: pointer;
+	-webkit-transition: .2s;
+	transition: background-color .2s;
+}
+
+.add:hover {
+	background-color: #ededed;
+}
+
+.add > .vertical {
+	position: relative;
+	margin-top: 4.5px;
+	margin-left: 10px;
+	min-width: 15px;
+	max-width: 15px;
+	height: 15px;
+	border-left: 4px solid grey;
+}
+
+.add > .horizontal {
+	position: relative;
+	margin-top: -9px;
+	margin-left: 4.5px;
+	min-width: 15px;
+	max-width: 15px;
+	height: 15px;
+	border-top: 4px solid grey;
+}
+
+.del {
+	margin-top: 5px;
+	margin-left: 5px;
+	min-width: 25px;
+	max-width: 25px;
+	height: 25px;
+	border: 2px solid red;
+	background-color: white;
+	border-radius: 5px;
+	cursor: pointer;
+	-webkit-transition: .2s;
+	transition: background-color .2s;
+}
+
+.del:hover {
+	background-color: #ffddd8;
+}
+
+.del > .pos {
+	position: relative;
+	margin-top: 10px;
+	margin-left: 8px;
+	min-width: 16px;
+	max-width: 16px;
+	height: 16px;
+	border-left: 4px solid red;
+	transform:rotate(45deg);
+}
+
+.del > .neg {
+	position: relative;
+	margin-top: -16px;
+	margin-left: -3px;
+	min-width: 16px;
+	max-width: 16px;
+	height: 16px;
+	border-left: 4px solid red;
+	transform:rotate(135deg);
+}
+
+.rename {
+	margin-top: 0px;
+	margin-left: 5px;
+	min-width: 25px;
+	max-width: 25px;
+	height: 25px;
+	border: 2px solid grey;
+	background-color: white;
+	border-radius: 5px;
+	cursor: pointer;
+	-webkit-transition: .2s;
+	transition: background-color .2s;
+}
+
+.rename:hover {
+	background-color: #ededed;
+}
+
+.rename > .renIcon {
+	color: grey;
+	font-size: 16pt;
+	padding-left: 5px;
+}
+
+.settings {
+	margin-top: 5px;
+	width: 25px;
+	height: 25px;
+	border: 2px solid grey;
+	border-radius: 5px;
+	background-color: white;
+	background-image: url("https://ciherrera20.github.io/images/LogicGates/settings.png");
+	background-size: 25px 25px;
+	cursor: pointer;
+	-webkit-transition: .2s;
+	transition: background-color .2s;
+}
+
+.settings:hover {
+	background-color: #ededed;
+}
+
+.componentTab {
+	border-bottom: 2px solid grey;
+	width: 229.5px;
+	padding-top: 4px;
+	padding-right: 20px;
+	padding-bottom: 4px;
+}
+
+.compName {
+	margin-left: 5px;
+	/* min-width: 50px; */
+	/* max-width: 136px; */
+	font-size: 16pt;
+	font-weight: bold;
+	word-wrap: break-word;
+	padding-top: 2px;
+	max-width: 129px;
+	cursor: pointer;
+}
+
+#nandName {
+	cursor: default;
+}
+
+.compName:hover {
+	text-decoration: underline;
+}
+
+#nandName:hover {
+	text-decoration: none;
+}
+
+.componentTab > .rowFlex > div {
+	width: 90px;
+	padding-right: 5px;
+}
+
+#nandButtonDiv {
+	width: 22px;
+}
+
+.componentTab .add {
+	margin-top: 0px;
+	/* display: none; */
+}
+
+.componentTab .del {
+	margin-top: 0px;
+	/* display: none; */
+}
+
+.componentTab .rename {
+	/* display: none; */
+}
+
+.workspaceWrapper {
+	position: absolute;
+	margin-left: 262px;
+	border: 2px solid black;
+	border-radius: 15px;
+	min-width: 1255px;
+	height: 700px;
+	opacity: 0.9;
+	background-color: grey;
+}
+
+.workspace {
+	margin-left: -2px;
+	border: 2px solid black;
+	border-right: 1px solid black;
+	min-width: 1255px;
+	height: 596px;
+	opacity: 0.9;
+	text-align: center;
+	background-color: lightgrey;
+}
+
+.workspace > span {
+	display: block;
+	font-size: 64pt;
+	font-weight: bold;
+	max-width: 1255px;
+	max-height: 596px;
+	word-wrap: break-word;
+	cursor: default;
+	color: grey;
+	-webkit-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	draggable: false;
+	z-index: -1;
+}
+
+.component {
+	/* margin-top: 10px; */
+	/* margin-left: 10px; */
+	position: absolute;
+	min-width: 20px;
+	height: 20px;
+	border: 4px solid black;
+	border-radius: 10px;
+	background-color: white;
+	font-size: 10pt;
+	font-weight: bold;
+	padding: 5px;
+}
+
+.invalid {
+	border-color: #ff412e;
+	background-color: #ffbab3;
+}
+
+.component > .columnFlex {
+	margin-top: -18px;
+	align-items: center;
+}
+
+.componentInfo {
+	width: 12px;
+	height: 12px;
+	/*border: 1px solid black;*/
+	border-radius: 6px;
+	color: white;
+	background-color: #525252;
+	font-size: 8pt;
+	font-family: monospace;
+	position: absolute;
+	right: -6px;
+	top: -6px;
+}
+
+.componentInfo:hover {
+	
+}
+
+.componentOutputRow {
+	height: 20px;
+}
+
+.componentInputRow {
+	height: 40px;
+}
+
+.inputTriangles {
+	margin-top: -3px;
+	z-index: 3;
+}
+
+.componentLabel {
+	height: 15px;
+	cursor: default;
+	-webkit-user-select: none;
+	user-select: none;
+	/* padding-bottom: 5px; */
+}
+
+svg.node {
+	width: 18px;
+	height: 18px;
+}
+
+svg.node > * {
+	width: 16px;
+	height: 16px;
+}
+
+svg.triangle {
+	width: 16px;
+	height: 12px;
+	padding-right: 1px;
+	padding-left: 1px;
+}
+
+.workspaceOutputRow, .workspaceInputRow {
+	height: 50px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+.workspaceOutputRow > .rowFlex, .workspaceInputRow > .rowFlex {
+	justify-content: flex-start;
+}
+
+.workspaceOutputRow .add {
+	margin-top: 15px;
+}
+
+.workspaceInput, .workspaceOutput {
+	margin-top: -10px;
+	margin-right: 5px;
+	width: 15px;
+	height: 30px;
+	border: 4px solid black;
+	border-radius: 10px;
+	background-color: white;
+	font-size: 10pt;
+	font-weight: bold;
+	padding: 5px;
+	z-index: 1;
+}
+
+.workspaceOutput {
+	margin-top: 10px;
+}
+
+.workspaceInput > .columnFlex, .workspaceOutput > .columnFlex {
+	align-items: center;
+	margin-top: -16px;
+}
+
+.workspaceOutput > .columnFlex {
+	margin-top: 6px;
+}
+
+.label {
+	height: 15px;
+	width: 10px;
+	border: solid 1px lightblue;
+	text-align: center;
+	background-color: #eeeeee;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.workspaceOutput .label {
+	margin-bottom: 5px;
+}
+
+.connectionPath {
+	position: absolute;
+}
+
+.button
+{
+	text-align: center;
+	margin-top: 5px;
+	padding: 3px 3px 0px 3px;
+	height: 22px;
+	cursor: pointer;
+	border: 2px solid grey;
+	border-radius: 5px;
+	background-color: #fff;
+	font-weight: bold;
+	font-size: 12pt;
+	color: black;
+	-webkit-transition: .2s;
+	transition: background-color .2s;
+}
+
+.button:hover
+{
+	background-color: #ededed;
+	cursor: pointer;
+}
+
+.inputs {
+	display: none;
+}
