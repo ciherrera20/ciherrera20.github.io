@@ -294,127 +294,127 @@ console.blog = function(...args) {
         return array;
     }
 
-    var customComponent = function(numInputs, numOutputs) {
-        let connection = function(locked) {
-            locked = Boolean(locked);
+	let connection = function(locked) {
+		locked = Boolean(locked);
 
-            let inputComp;
-            let outputComps = [];
-            let that = this;
+		let inputComp;
+		let outputComps = [];
+		let that = this;
 
-			let events = Object.create(null);
-			events.triggerEvent = function(eventName, e) {
-				events[eventName].forEach(function(callback) {
-					callback(e);
-				});
+		let events = Object.create(null);
+		events.triggerEvent = function(eventName, e) {
+			events[eventName].forEach(function(callback) {
+				callback(e);
+			});
+		}
+		events.onOutputChange = [];
+		events.onComputeOutput = [];
+		
+		Object.defineProperty(this, "inputComps", {get(){return [inputComp]}});
+		Object.defineProperty(this, "outputComps", {get(){return outputComps}});
+
+		this.addEventListener = function(eventName, callback) {
+			if (events[eventName]) {
+				events[eventName].push(callback);
+				callback(this.readOutput());
 			}
-			events.onOutputChange = [];
-			events.onComputeOutput = [];
-			
-            Object.defineProperty(this, "inputComps", {get(){return [inputComp]}});
-            Object.defineProperty(this, "outputComps", {get(){return outputComps}});
+		}
+	
+		this.removeEventListener = function(eventName, callback) {
+			if (events[eventName]) {
+				let callbacks = events[eventName];
+				callbacks.splice(callbacks.indexOf(callback), 1);
+				callback(false);
+			}
+		}
+		
+		this.connection = true;
+		
+		this.free = function() {
+			locked = false;
+		}
 
-			this.addEventListener = function(eventName, callback) {
-				if (events[eventName]) {
-					events[eventName].push(callback);
-					callback(this.readOutput());
-				}
+		this.readOutput = function() {
+			if (inputComp)
+				return inputComp.readOutput();
+			else
+				return false;
+		}
+
+		this.computeOutput = function(history) {
+			if (locked)
+				return;
+
+			events.triggerEvent("onOutputChange", this.readOutput());
+			
+			outputComps.forEach(function(comp) {
+				comp.computeOutput(history);
+			});
+		}
+
+		this.requestOutput = function(history) {
+			if (locked)
+				return false;
+
+			let output;
+			
+			if (inputComp)
+				output = inputComp.requestOutput(history);
+			else
+				output = false;
+			
+			events.triggerEvent("onComputeOutput", this.readOutput());
+			
+			return output;
+		}
+
+		this.setInputComp = function(comp, i, j) {
+			let input = false;
+			if (inputComp !== undefined) {
+				input = inputComp.readOutput();
+				that.removeInputComp();
 			}
 		
-			this.removeEventListener = function(eventName, callback) {
-				if (events[eventName]) {
-					let callbacks = events[eventName];
-					callbacks.splice(callbacks.indexOf(callback), 1);
-					callback(false);
-				}
-			}
-			
-            this.connection = true;
-			
-            this.free = function() {
-                locked = false;
-            }
+			if (comp === undefined)
+				return;
 
-            this.readOutput = function() {
-                if (inputComp)
-                    return inputComp.readOutput();
-                else
-                    return false;
-            }
+			if (comp.getOutputComp !== undefined)
+				comp = comp.getOutputComp(i);
+		
+			inputComp = comp;
+			comp.addOutputComp(this);
 
-            this.computeOutput = function(history) {
-                if (locked)
-                    return;
+			if (input !== comp.readOutput())
+				that.computeOutput();
+		}
 
-				events.triggerEvent("onOutputChange", this.readOutput());
-				
-                outputComps.forEach(function(comp) {
-                    comp.computeOutput(history);
-                });
-            }
+		this.addOutputComp = function(comp) {
+			let i = outputComps.indexOf(comp);
+			if (i === -1)
+				outputComps.push(comp);
+		}
 
-            this.requestOutput = function(history) {
-                if (locked)
-                    return false;
+		this.removeInputComp = function() {
+			if (inputComp === undefined)
+				return;
 
-				let output;
-				
-                if (inputComp)
-                    output = inputComp.requestOutput(history);
-                else
-                    output = false;
-				
-				events.triggerEvent("onComputeOutput", this.readOutput());
-				
-				return output;
-            }
+			let input = inputComp.readOutput();
 
-            this.setInputComp = function(comp, i, j) {
-                let input = false;
-                if (inputComp !== undefined) {
-                    input = inputComp.readOutput();
-                    that.removeInputComp();
-                }
-			
-                if (comp === undefined)
-                    return;
+			inputComp.removeOutputComp(this);
+			inputComp = undefined;
 
-                if (comp.getOutputComp !== undefined)
-                    comp = comp.getOutputComp(i);
-			
-                inputComp = comp;
-                comp.addOutputComp(this);
+			if (!input)
+				that.computeOutput();
+		}
 
-                if (input !== comp.readOutput())
-                    that.computeOutput();
-            }
-
-            this.addOutputComp = function(comp) {
-                let i = outputComps.indexOf(comp);
-                if (i === -1)
-                    outputComps.push(comp);
-            }
-
-            this.removeInputComp = function() {
-                if (inputComp === undefined)
-                    return;
-
-                let input = inputComp.readOutput();
-
-                inputComp.removeOutputComp(this);
-                inputComp = undefined;
-
-                if (!input)
-                    that.computeOutput();
-            }
-
-            this.removeOutputComp = function(comp) {
-                let i = outputComps.indexOf(comp);
-                if (i !== -1)
-                    outputComps.splice(i, 1);
-            }
-        }
-
+		this.removeOutputComp = function(comp) {
+			let i = outputComps.indexOf(comp);
+			if (i !== -1)
+				outputComps.splice(i, 1);
+		}
+	}
+	
+    var customComponent = function(numInputs, numOutputs) {
         let inputsTo = populateArray([], numInputs, []);
         let outputsFrom = populateArray([], numOutputs, new connection());
 
@@ -434,7 +434,7 @@ console.blog = function(...args) {
                 });
             }
 
-            Object.defineProperty(this, "inputs", {get(){return inputs}});
+            //Object.defineProperty(this, "inputs", {get(){return inputs}});
             Object.defineProperty(this, "inputsTo", {get(){return instInputsTo}});
             Object.defineProperty(this, "outputsFrom", {get(){return instOutputsFrom}});
             Object.defineProperty(this, "numInputs", {get(){return numInputs}});
@@ -581,6 +581,20 @@ console.blog = function(...args) {
                 loadOutputs();
                 return outputs;
             }
+			
+			/**
+			 * Returns a string representing the state of the component
+			 */
+			this.getState = function() {
+				
+			}
+			
+			/**
+			 * Takes a state and loads it into the component
+			 */
+			this.loadState = function(state) {
+				
+			}
         }
 
         Object.defineProperty(customComponent, "inputs", {get(){return inputs}});

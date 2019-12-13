@@ -326,3 +326,15 @@
     ram8Bit1a.takeOutputFrom(mux8Bit0, 6, 6);
     ram8Bit1a.takeOutputFrom(mux8Bit0, 7, 7);
 }
+
+/*var nand0 = new nand();
+var toggleable0 = new toggleable();
+var toggleable1 = new toggleable();
+nand0.setInputComp(toggleable0, 0, 0);
+nand0.setInputComp(toggleable1, 0, 1);*/
+
+var latch0 = new latch();
+var toggleable0 = new toggleable();
+var toggleable1 = new toggleable();
+latch0.setInputComp(toggleable0, 0, 0);
+latch0.setInputComp(toggleable1, 0, 1);

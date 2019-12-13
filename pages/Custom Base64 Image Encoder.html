@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Base 64 Image Encoder</title>
+		<script src="../scripts/Matrix.js"></script>
 	</head>
 	<body>
 		<img id="image"></img>
@@ -236,6 +237,167 @@
 					fillColorCanvas(mouse.selectedPixel);
 				}
 			}, false);
+			
+			
+			// Utility functions:
+			ctx.constructor.prototype.loopOnPixels = function(sx, sy, sw, sh, op, put = true) {
+				var imgData = this.getImageData(sx, sy, sw, sh);
+				for (var i = 0; i < imgData.data.length; i += 4) {
+					var ri = i;
+					var gi = i + 1;
+					var bi = i + 2;
+					var ai = i + 3;
+					
+					op(imgData, ri, gi, bi, ai);
+				}
+				
+				if (put) {
+					this.putImageData(imgData, sx, sy);
+				}
+				return imgData;
+			}
+			
+			ctx.constructor.prototype.toGray = function(sx, sy, sw, sh, put = true) {
+				return this.loopOnPixels(sx, sy, sw, sh, function(imgData, r, g, b, a) {
+					var gray = 0.21 * imgData.data[r] + 0.72 * imgData.data[g] + 0.07 * imgData.data[b];
+					imgData.data[r] = gray;
+					imgData.data[g] = gray;
+					imgData.data[b] = gray;
+				}, put);
+			}
+			
+			ctx.constructor.prototype.kernelConvolution = function(sx, sy, sw, sh, kernels, put = true) {
+				var newData = ctx.getImageData(sx, sy, sw, sh);
+				this.loopOnPixels(sx, sy, sw, sh, function(imgData, r, g, b, a) {
+					//console.log(r);
+					var columns = imgData.width;
+					var rows = imgData.height;
+					
+					// Index if the array were a vectorized image with only one channel
+					var i = r / 4;
+					
+					// Gets the row of the current pixel
+					var row = Math.floor(i / columns);
+					
+					// Gets the column of the current pixel
+					var col = i % columns;
+					
+					// Performs each convolution with the respective kernel and channel
+					kernels.forEach(function(kernel, c) {
+						// If there is no kernel, no convolution is performed
+						if (!kernel) {
+							return;
+						}
+						
+						// Actual index of c, the current channel
+						var trueC = c + r;
+						
+						// Offsets based on the size of the kernel
+						var rowOff = Math.round(Math.floor(kernel.rows / 2));
+						var colOff = Math.round(Math.floor(kernel.columns / 2));
+						
+						// Result of the convolution on a pixel. Loops through weights in the kernel
+						var wsum = 0;
+						kernel.data.forEach(function(curRow, u) {
+							// Gets the row on the image of the current weight in the kernel
+							var kRow = row - rowOff + u;
+							curRow.forEach(function(w, v) {
+								// Gets the column on the image of the current weight in the kernel
+								var kCol = col - colOff + v;
+								
+								if (kRow < 0 || kCol < 0 || kRow >= rows || kCol >= columns) {
+									return;
+								}
+								
+								//console.log(trueC, kRow, kCol);
+								
+								// Gets the true index for kCol
+								var pixelTrueI = (kRow * columns + kCol) * 4 + c;
+								wsum += (imgData.data[pixelTrueI] / 255) * w;
+							});
+						});
+						//console.log(trueC, wsum);
+						newData.data[trueC] = wsum * 255;
+					});
+				}, false);
+				if (put) {
+					ctx.putImageData(newData, sx, sy);
+				}
+				return newData;
+			}
+			
+			function fullOutline() {
+				ctx.toGray(0, 0, canvas.width, canvas.height);
+				/*var kl = new Matrix(7, 7,    
+							[1, 2, 3, 0, -3, -2, -1,
+                             2, 3, 4, 0, -4, -3, -2,
+                             3, 4, 5, 0, -5, -4, -3,
+                             4, 5, 6, 0, -6, -5, -4,
+                             3, 4, 5, 0, -5, -4, -3,
+                             2, 3, 4, 0, -4, -3, -2,
+                             1, 2, 3, 0, -3, -2, -1]
+				);
+				var kr = new Matrix(7, 7,    
+							[-1, -2, -3, 0, 3, 2, 1,
+                             -2, -3, -4, 0, 4, 3, 2,
+                             -3, -4, -5, 0, 5, 4, 3,
+                             -4, -5, -6, 0, 6, 5, 4,
+                             -3, -4, -5, 0, 5, 4, 3,
+                             -2, -3, -4, 0, 4, 3, 2,
+                             -1, -2, -3, 0, 3, 2, 1]
+				);
+				var kt = new Matrix(7, 7,     
+							[1, 2, 3, 4, 3, 2, 1, 
+                             2, 3, 4, 5, 4, 3, 2, 
+                             3, 4, 5, 6, 5, 4, 3, 
+                             0, 0, 0, 0, 0, 0, 0, 
+                            -3, -4, -5, -6, -5, -4, -3, 
+                            -2, -3, -4, -5, -4, -3, -2, 
+                            -1, -2, -3, -4, -3, -2, -1]
+				);
+				var kb = new Matrix(7, 7,     
+							[-1, -2, -3, -4, -3, -2, -1, 
+                             -2, -3, -4, -5, -4, -3, -2, 
+                             -3, -4, -5, -6, -5, -4, -3, 
+                              0, 0, 0, 0, 0, 0, 0, 
+                              3, 4, 5, 6, 5, 4, 3, 
+                              2, 3, 4, 5, 4, 3, 2, 
+                              1, 2, 3, 4, 3, 2, 1]
+				);*/
+				
+				var kt = new Matrix(3, 3, 
+							[1, 2, 1,
+							 0, 0, 0,
+							-1, -2, -1]
+				);
+				var kb = new Matrix(3, 3, 
+							[-1, -2, -1,
+							  0, 0, 0,
+							  1, 2, 1]
+				);
+				var kl = new Matrix(3, 3, 
+							[1, 0, -1,
+							 2, 0, -2,
+							 1, 0, -1]
+				);
+				var kr = new Matrix(3, 3, 
+							[-1, 0, 1,
+							 -2, 0, 2,
+							 -1, 0, 1]
+				);
+				
+				var ld = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kl, undefined, undefined, undefined], false);
+				var rd = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kr, undefined, undefined, undefined], false);
+				var td = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kt, undefined, undefined, undefined], false);
+				var bd = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kb, undefined, undefined, undefined], false);
+				
+				ctx.loopOnPixels(0, 0, canvas.width, canvas.height, function(imgData, r, g, b, a) {
+					let max = Math.max(ld.data[r], rd.data[r], rd.data[r], bd.data[r]);
+					imgData.data[r] = max;
+					imgData.data[g] = max;
+					imgData.data[b] = max;
+				}, true);
+			}
 		</script>
 	</body>
 </html>

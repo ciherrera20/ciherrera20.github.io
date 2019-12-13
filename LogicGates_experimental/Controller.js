@@ -142,6 +142,7 @@ HTML.tab = function(name, isNand) {
 
 	return componentTab;
 }
+HTML.maxTextWidth = 13;
 HTML.svgCircle = function() {
 	let node = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	node.setAttribute("class", "node");
@@ -161,7 +162,7 @@ HTML.svgCircle = function() {
 	text.setAttribute("text-anchor", "middle");
 	text.setAttribute("font-size", "11px");
 	text.setAttribute("textLength", "13");
-	text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+	text.setAttribute("lengthAdjust", "spacing");
 				
 	node.appendChild(circle);
 	node.appendChild(text);
@@ -175,6 +176,12 @@ HTML.svgCircle = function() {
 	
 	node.setText = function(str) {
 		text.innerHTML = str;
+		//console.log(str, text.getComputedTextLength());
+		let len = text.getComputedTextLength();
+		if (len > HTML.maxTextWidth) {
+			len = HTML.maxTextWidth;
+		}
+		text.setAttribute("textLength", `${len}`);
 	}
 				
 	return node;
@@ -521,6 +528,35 @@ HTML.componentBlock = function(name) {
 	return componentBlock;
 }
 
+{
+	var GetEventHandler = function(obj, eventTypes) {
+		let events = Object.create(null);
+		events.triggerEvent = function(eventName, e) {
+			events[eventName].forEach(function(callback) {
+				callback(e);
+			});
+		}
+		
+		eventTypes.forEach(function(type) {
+			events[type] = [];
+		});
+		
+		obj.addEventListener = function(eventName, callback) {
+			if (events[eventName]) {
+				events[eventName].push(callback);
+			}
+		}
+		obj.removeEventListener = function(eventName, callback) {
+			if (events[eventName]) {
+				let callbacks = events[eventName];
+				callbacks.splice(callbacks.indexOf(callback), 1);
+			}
+		}
+		
+		return events;
+	}
+}
+
 // This code is meant to mediate the interactions between the Logic Gate code and the html
 // It should handle calling all the functions necessary to create the internal structure of custom components
 // such as setInputComp, sendInputTo, and takeOutputFrom
@@ -552,7 +588,8 @@ HTML.componentBlock = function(name) {
 		let tab = new Tab(name, isNand, this);
 		let workspace;
 		let logicGate; // Constructor for logic gate objects that handle the actual computations
-
+		let eventHandler = GetEventHandler(this, ["onShow", "onHide"]);
+		
 		if (isNand) {
 			logicGate = nand;
 		} else {
@@ -562,6 +599,7 @@ HTML.componentBlock = function(name) {
 
 		Object.defineProperty(this, "uid", {get: function(){return instUid}});
 		Object.defineProperty(this, "name", {get: function(){return name}});
+		Object.defineProperty(this, "workspace", {get: function(){return workspace}});
 		Object.defineProperty(this, "dependencies", {get: function(){return dependencies}});
 		
 		// Adds the dependencies of the component provided to this component, setting the dependency to 1 if it has not yet been added or incrementing the dependency if it has
@@ -609,25 +647,33 @@ HTML.componentBlock = function(name) {
 			});
 		}
 		
-		this.updateInputName = function(id, name) {
+		/*this.updateInputName = function(id, name) {
 			instances.forEach(function(instance) {
 				instance.updateInputName(id, name);
 			});
-		}
+		}*/
 
 		this.hide = function() {
 			current.setWorkspace(undefined);
 			workspace.hide();
 			this.updateInstances();
+			eventHandler.triggerEvent("onHide");
 		}
 
 		this.show = function() {
 			current.setWorkspace(workspace);
 			workspace.show();
+			eventHandler.triggerEvent("onShow");
 		}
 
 		this.createComponentBlock = function() {
-			let componentBlock = new ComponentBlock(name, logicGate, current.component, this, workspace.inputNames);
+			//console.log(name, logicGate, current.component, this, workspace);
+			let componentBlock;
+			if (isNand) {
+				componentBlock = new ComponentBlock(name, logicGate, current.component, this, ["", ""]);
+			} else {
+				componentBlock = new ComponentBlock(name, logicGate, current.component, this, workspace.inputNames);
+			}
 			instances.push(componentBlock);
 			return componentBlock;
 		}
@@ -818,6 +864,7 @@ HTML.componentBlock = function(name) {
 		let outUid = 0;
 		let inUid = 0;
 		let innerHTML = HTML.workspace(name);
+		let eventHandler = GetEventHandler(this, ["onShow", "onHide"]);
 		
 		this.logicGate = logicGate;
 
@@ -1016,10 +1063,12 @@ HTML.componentBlock = function(name) {
 
 		this.hide = function() {
 			innerHTML.style.display = "none";
+			eventHandler.triggerEvent("onHide");
 		}
 
 		this.show = function() {
 			innerHTML.style.display = "block";
+			eventHandler.triggerEvent("onShow");
 		}
 
 		this.addComponentBlock = function(componentBlock) {
@@ -1033,7 +1082,7 @@ HTML.componentBlock = function(name) {
 		
 		this.updateInputName = function(id, name) {
 			inputNames[id] = name;
-			parent.updateInputName(id, name);
+			//parent.updateInputName(id, name);
 		}
 		
 		this.rename = innerHTML.rename;
@@ -1071,7 +1120,11 @@ HTML.componentBlock = function(name) {
 		let internalComponent = new logicGate();
 		let inputs = [];
 		let outputs = [];
-
+		let eventHandler = GetEventHandler(this, ["onShow", "onHide"]);
+		
+		residence.addEventListener("onShow", function(e){eventHandler.triggerEvent("onShow", e)});
+		residence.addEventListener("onHide", function(e){eventHandler.triggerEvent("onHide", e)});
+		
 		Object.defineProperty(this, "innerHTML", {get(){return innerHTML}});
 		Object.defineProperty(this, "internalComponent", {get(){return internalComponent}});
 		Object.defineProperty(this, "residence", {get(){return residence}});
@@ -1172,7 +1225,6 @@ HTML.componentBlock = function(name) {
 
 			setInternalCallbacks(innerHTML.setCostume);
 		}
-
 
 		let blockInput = function() {
 			let self = this;
@@ -1358,10 +1410,18 @@ HTML.componentBlock = function(name) {
 			numInputs++;
 		}
 		
-		this.updateInputName = function(id, name) {
+		/*this.updateInputName = function(id, name) {
 			inputs[id].setName(name);
-		}
+		}*/
 
+		residence.addEventListener("onShow", function() {
+			inputs.forEach(function(input, id) {
+				//console.log(parent.workspace.inputNames[id]);
+				//console.log(residence.name, parent.name, parent.workspace.inputNames[id]);
+				input.setName(parent.workspace.inputNames[id]);
+			});
+		});
+		
 		this.updatePathsPos = function() {
 			outputs.forEach(function(output) {
 				output.updatePathsPos();
@@ -1430,9 +1490,11 @@ HTML.componentBlock = function(name) {
 		}
 		this.updateIO();
 		
-		inputs.forEach(function(input, i) {
-			input.setName(inputNames[i]);
-		});
+		setTimeout(function() {
+			inputs.forEach(function(input, i) {
+				input.setName(inputNames[i]);
+			});
+		}, 0);
 	}
 
 }

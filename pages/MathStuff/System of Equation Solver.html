@@ -64,9 +64,9 @@
 			var uagent = navigator.userAgent.toLowerCase();
 			
 			function DetectIphone() {
-				if(uagent.search("iphone") > -1) {
+				if (uagent.search("iphone") > -1) {
 					uagent = true;
-					for(var a = 0; a < div.length; a++) {
+					for (var a = 0; a < div.length; a++) {
 						div[a].style.maxWidth = "500px";
 						div[a].style.minWidth = "500px";
 					}
@@ -81,54 +81,54 @@
 			DetectIphone();
 			
 			setInterval(function() {
-				if(!uagent) {
-					for(var a = 0; a < div.length; a++)
+				if (!uagent) {
+					for (var a = 0; a < div.length; a++)
 						div[a].style.marginLeft = ((window.innerWidth) / 2 - (Number(div[a].style.maxWidth.replace("px", "")) / 2)).toString() + "px";
 				} else {
-					for(var a = 0; a < div.length; a++)
+					for (var a = 0; a < div.length; a++)
 						div[a].style.marginLeft = "0px";
 				}
-				if(submitted) {
-					for(var a = 0; a < calc.length; a++)
+				if (submitted) {
+					for (var a = 0; a < calc.length; a++)
 						calc[a].style.display = "inline";
 				}
 			}, 100);
 			
 			function copyMatrix(list) {
 				var b = [];
-				for(var a = 0; a < list.length; a++) {
+				for (var a = 0; a < list.length; a++) {
 					b.push([]);
-					for(var c = 0; c < list[0].length; c++)
+					for (var c = 0; c < list[0].length; c++)
 						b[a].push(list[a][c]);
 				}
 				return b;
 			}
 			
 			function getDeterminant(matrix) {
-				if(matrix.length != matrix[0].length)
+				if (matrix.length != matrix[0].length)
 					return "Invalid input";
-				if(matrix.length == 2)
+				if (matrix.length == 2)
 					return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
 				else {
 					var determinants = [];
 					var b = [];
-					for(var a = 0; a < matrix.length; a++) {
+					for (var a = 0; a < matrix.length; a++) {
 						b = copyMatrix(matrix);
 						b.shift();
-						for(var c = 0; c < matrix.length - 1; c++)
+						for (var c = 0; c < matrix.length - 1; c++)
 							b[c].splice(a, 1);
 						determinants.push(getDeterminant(b));
 					}
 					b = 0;
-					if(Math.round(matrix.length / 2) == (matrix.length / 2))
+					if (Math.round(matrix.length / 2) == (matrix.length / 2))
 						coef = -1;
 					else
 						coef = 1;
-					for(var a = 0; a < matrix.length; a++) {
+					for (var a = 0; a < matrix.length; a++) {
 						b += matrix[0][a] * determinants[a] * coef;
 						coef *= -1;
 					}
-					if(Math.round(matrix.length / 2) == (matrix.length / 2))
+					if (Math.round(matrix.length / 2) == (matrix.length / 2))
 						return -1 * b;
 					else
 						return b;
@@ -136,18 +136,18 @@
 			}
 			
 			function getMatrixOfMinors(matrix) {
-				if(matrix.length != matrix[0].length)
+				if (matrix.length != matrix[0].length)
 					return "Invalid input";
 				else {
-					if(matrix.length == 2)
+					if (matrix.length == 2)
 						return [[matrix[1][1], matrix[1][0]], [matrix[0][1], matrix[0][0]]];
 					else {
 						var minorMatrix = copyMatrix(matrix);
-						for(var a = 0; a < matrix.length; a++) {
-							for(var b = 0; b < matrix.length; b++) {
+						for (var a = 0; a < matrix.length; a++) {
+							for (var b = 0; b < matrix.length; b++) {
 								var d = copyMatrix(matrix);
 								d.splice(a, 1);
-								for(var c = 0; c < matrix.length - 1; c++)
+								for (var c = 0; c < matrix.length - 1; c++)
 									d[c].splice(b, 1);
 								minorMatrix[a][b] = getDeterminant(d);
 							}
@@ -158,17 +158,17 @@
 			}
 			
 			function getMatrixOfCofactors(matrix) {
-				if(matrix.length != matrix[0].length)
+				if (matrix.length != matrix[0].length)
 					return "Invalid input";
 				else {
 					var coef = 1;
 					var cofactorMatrix = copyMatrix(matrix);
-					for(var a = 0; a < matrix.length; a++) {
-						for(var b = 0; b < matrix.length; b++) {
+					for (var a = 0; a < matrix.length; a++) {
+						for (var b = 0; b < matrix.length; b++) {
 							cofactorMatrix[a][b] *= coef;
 							coef *= -1;
 						}
-						if(Math.round(matrix.length / 2) == (matrix.length / 2))
+						if (Math.round(matrix.length / 2) == (matrix.length / 2))
 							coef *= -1;
 					}
 					return cofactorMatrix;
@@ -176,12 +176,12 @@
 			}
 			
 			function adjugateMatrix(matrix) {
-				if(matrix.length != matrix[0].length)
+				if (matrix.length != matrix[0].length)
 					return "Invalid input";
 				else {
 					var adjugatedMatrix = copyMatrix(matrix);
-					for(var a = 0; a < matrix.length; a++) {
-						for(var b = 0; b < matrix.length; b++)
+					for (var a = 0; a < matrix.length; a++) {
+						for (var b = 0; b < matrix.length; b++)
 							adjugatedMatrix[a][b] = matrix[b][a];
 					}
 					return adjugatedMatrix;
@@ -190,18 +190,18 @@
 			
 			function multiplyMatrices(matrix1, matrix2) {
 				try {
-					if(matrix1[0].length != matrix2.length)
+					if (matrix1[0].length != matrix2.length)
 						return "Cannot multiply";
 				} catch(err) {
 					console.log(err);
 				}
 				var matrix3 = [];
-				if(Number(matrix1).toString() == "NaN") {
-					for(var a = 0; a < matrix1.length; a++) {
+				if (Number(matrix1).toString() == "NaN") {
+					for (var a = 0; a < matrix1.length; a++) {
 						var matrixRow = [];
-						for(var b = 0; b < matrix2[0].length; b++) {
+						for (var b = 0; b < matrix2[0].length; b++) {
 							var d = 0;
-							for(var c = 0; c < matrix2.length; c++)
+							for (var c = 0; c < matrix2.length; c++)
 								d += matrix1[a][c] * matrix2[c][b];
 							matrixRow.push(d);
 						}
@@ -210,8 +210,8 @@
 					return matrix3;
 				} else {
 					matrix3 = copyMatrix(matrix2);
-					for(var a = 0; a < matrix2.length; a++) {
-						for(var b = 0; b < matrix2.length; b++)
+					for (var a = 0; a < matrix2.length; a++) {
+						for (var b = 0; b < matrix2.length; b++)
 							matrix3[a][b] = matrix2[a][b] * matrix1;
 					}
 					return matrix3;
@@ -228,34 +228,34 @@
 			}
 			
 			function createEquations(num) {
-				if(num <= 1) {
+				if (num <= 1) {
 					alert("The number entered is too small");
 					return "Too small";
-				} else if(num >= 26) {
+				} else if (num >= 26) {
 					alert("The number entered is too large");
 					return "Too large";
 				}
-				if(submitted)
+				if (submitted)
 					return "Cannot create";
 				submitted = true;
 				var newline = document.createElement("br");
 				eqns.appendChild(newline);
 				newline = document.createElement("hr");
 				eqns.appendChild(newline);
-				for(var a = 0; a < num; a++) {
-					for(var b = 0; b < num + 1; b++) {
+				for (var a = 0; a < num; a++) {
+					for (var b = 0; b < num + 1; b++) {
 						var elem = document.createElement("input");
 						elem.type = "text";
 						elem.className = "coefficientMatrix";
 						elem.placeholder = "coef";
-						if(b == num) {
+						if (b == num) {
 							elem.placeholder = "result";
 							elem.className = "resultMatrix";
 						}
 						eqns.appendChild(elem);
-						if(b != num) {
+						if (b != num) {
 							elem = document.createElement("p");
-							if(b == num - 1)
+							if (b == num - 1)
 								elem.innerHTML = letters[b] + " = ";
 							else
 								elem.innerHTML = letters[b] + " + ";
@@ -272,8 +272,8 @@
 			
 			function fix(matrix) {
 				var matrix2 = copyMatrix(matrix);
-				for(var a = 0; a < matrix.length; a++) {
-					for(var b = 0; b < matrix[0].length; b++)
+				for (var a = 0; a < matrix.length; a++) {
+					for (var b = 0; b < matrix[0].length; b++)
 						matrix2[a][b] = Math.round(matrix[a][b] * Math.pow(10, 14)) / Math.pow(10, 14);
 				}
 				return matrix2;
@@ -282,20 +282,20 @@
 			function calculate() {
 				coefMatrix = [];
 				resultsMatrix = [];
-				if(!submitted)
+				if (!submitted)
 					return "No inputs to calculate";
 				var inputMatrix1Elems = document.getElementsByClassName("coefficientMatrix");
 				var c = 0;
-				for(var a = 0; a < Math.sqrt(inputMatrix1Elems.length); a++) {
+				for (var a = 0; a < Math.sqrt(inputMatrix1Elems.length); a++) {
 					var matrix1Rows = [];
-					for(var b = 0; b < Math.sqrt(inputMatrix1Elems.length); b++) {
+					for (var b = 0; b < Math.sqrt(inputMatrix1Elems.length); b++) {
 						matrix1Rows.push(Number(inputMatrix1Elems[c].value));
 						c++;
 					}
 					coefMatrix.push(matrix1Rows);
 				}
 				var inputMatrix2Elems = document.getElementsByClassName("resultMatrix");
-				for(var a = 0; a < inputMatrix2Elems.length; a++) {
+				for (var a = 0; a < inputMatrix2Elems.length; a++) {
 					var matrix2Rows = [];
 					matrix2Rows.push(Number(inputMatrix2Elems[a].value));
 					resultsMatrix.push(matrix2Rows);
@@ -303,9 +303,9 @@
 				var result = multiplyMatrices(invertMatrix(coefMatrix), resultsMatrix);
 				result = fix(result);
 				var str = "";
-				for(var a = 0; a < result.length; a++) {
+				for (var a = 0; a < result.length; a++) {
 					str += letters[a] + " = " + result[a][0].toString();
-					if(a != result.length - 1)
+					if (a != result.length - 1)
 						str += ", ";
 				}
 				return str;
