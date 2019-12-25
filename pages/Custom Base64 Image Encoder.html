@@ -326,7 +326,8 @@
 				return newData;
 			}
 			
-			function fullOutline() {
+			function fullOutline(size = 3, width = 1) {
+				//let original = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				ctx.toGray(0, 0, canvas.width, canvas.height);
 				/*var kl = new Matrix(7, 7,    
 							[1, 2, 3, 0, -3, -2, -1,
@@ -365,7 +366,7 @@
                               1, 2, 3, 4, 3, 2, 1]
 				);*/
 				
-				var kt = new Matrix(3, 3, 
+				/*var kt = new Matrix(3, 3, 
 							[1, 2, 1,
 							 0, 0, 0,
 							-1, -2, -1]
@@ -384,19 +385,69 @@
 							[-1, 0, 1,
 							 -2, 0, 2,
 							 -1, 0, 1]
-				);
-				
-				var ld = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kl, undefined, undefined, undefined], false);
-				var rd = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kr, undefined, undefined, undefined], false);
+				);*/
+				var kt = getSobelKernel(size, width, "top");
+				var kb = getSobelKernel(size, width, "bottom");
+				var kl = getSobelKernel(size, width, "left");
+				var kr = getSobelKernel(size, width, "right");
+			
 				var td = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kt, undefined, undefined, undefined], false);
 				var bd = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kb, undefined, undefined, undefined], false);
+				var ld = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kl, undefined, undefined, undefined], false);
+				var rd = ctx.kernelConvolution(0, 0, canvas.width, canvas.height, [kr, undefined, undefined, undefined], false);
 				
+				//ctx.putImageData(original, 0, 0);
 				ctx.loopOnPixels(0, 0, canvas.width, canvas.height, function(imgData, r, g, b, a) {
 					let max = Math.max(ld.data[r], rd.data[r], rd.data[r], bd.data[r]);
-					imgData.data[r] = max;
-					imgData.data[g] = max;
-					imgData.data[b] = max;
+					//if (max === 255) {
+						imgData.data[r] = max;
+						imgData.data[g] = max;
+						imgData.data[b] = max;
+						/*imgData.data[r] = 0;
+						imgData.data[g] = 0;
+						imgData.data[b] = 0;*/
+					//}
 				}, true);
+			}
+			
+			function getSobelKernel(size, width, dir) {
+				let k = new Matrix(size, size, 0);
+				let horizontal = dir === "left" || dir === "right";
+				let rev = dir === "bottom" || dir === "right";
+				for (var row = 0; row < (size - width) / 2; row++) {
+					for (let column = 0; column < (size - 1) / 2; column++) {
+						let w = column + 1 + row;
+						let trow, tcolumn;
+						if (rev) {
+							w *= -1;
+						}
+						if (horizontal) {
+							trow = column;
+							tcolumn = row;
+						} else {
+							trow = row;
+							tcolumn = column;
+						}
+						k.data[trow][tcolumn] = w;
+						k.data[trow][size - tcolumn - 1] = horizontal ? -w : w;
+						k.data[size - trow - 1][tcolumn] = horizontal ? w : -w;
+						k.data[size - trow - 1][size - tcolumn - 1] = -w;
+					}
+					let column = (size - 1) / 2;
+					let w = column + 1 + row;
+					let trow, tcolumn;
+					if (rev) {
+						w *= -1;
+					}
+					if (horizontal) {
+						k.data[column][row] = w;
+						k.data[column][size - row - 1] = -w;
+					} else {
+						k.data[row][column] = w;
+						k.data[size - row - 1][column] = -w;
+					}
+				}	
+				return k;
 			}
 		</script>
 	</body>

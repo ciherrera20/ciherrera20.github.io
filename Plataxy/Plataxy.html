@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Plataxy</title>
+		<script src="../scripts/AnimationFrame.js"></script>
+	</head>
+	<body>
+		<canvas id="canvas" width="1000px" height="700px"></canvas>
+		<script>
+			//{	// Global Scope
+				Object.defineProperty(Math, "TAU", {
+					value: Math.PI * 2,
+					writable: false,
+					configurable: false
+				});
+			
+				let canvas = document.getElementById("canvas");
+				let ctx = canvas.getContext("2d");
+				let keyState = [];
+			
+				// Creates an object from a prototype and constructor
+				let createObject = function(prototype, constructor) {
+					let that = Object.create(prototype);
+				
+					that.super = prototype;
+					prototype.constructor = constructor;
+				
+					return that;
+				}
+				
+				// Clamps an angle between 0 and tau
+				let clampAngle = function(angle) {
+					return angle - Math.TAU * Math.floor(angle / Math.TAU);
+				}
+				
+				// Gets the A, B, and C values for the line connecting the two given points
+				let getABC = function(point1, point2) {
+					let obj = Object.create(null);
+					
+					let dx = point2.x - point1.x;
+					let dy = point1.y - point2.y;
+					
+					obj.A = dy;
+					obj.B = dx;
+					obj.C = dx * point1.y + dy * point1.x;
+					
+					return obj;
+				}
+				
+				// Returns the point that is the intersection between the two lines
+				let getIntersection = function(abc1, abc2) {
+					let invDet = 1 / (abc1.A * abc2.B - abc2.A * abc1.B);
+					
+					if (Math.abs(invDet) === Infinity) {
+						return Point.create(Infinity, Infinity);
+					}
+					
+					let a = invDet * abc2.B;
+					let b = invDet * -1 * abc1.B;
+					let c = invDet * -1 * abc2.A;
+					let d = invDet * abc1.A;
+					
+					let x = abc1.C * a + abc2.C * b;
+					let y = abc1.C * c + abc2.C * d;
+					
+					return Point.create(x, y);
+				}
+				
+				let deltaMax = 0.0000001; // Max difference between two numbers
+				let inRange = function(lower, upper, x) {
+					let tl = lower, tu = upper;
+					if (lower > upper) {
+						tl = upper;
+						tu = lower;
+					}
+					
+					return tl - deltaMax <= x && x <= tu + deltaMax;
+				}
+				
+				// Vector objects store an x and y component, and a magnitude and angle
+				let Vector;
+				{ // Vector scope
+					// Vector prototype object
+					let vectorTemplate = Object.create(null);
+					
+					// Copies a vector
+					vectorTemplate.copy = function() {
+						//let that = createObject(vectorTemplate, Vector);
+						
+						//that.x = this.x;
+						//that.y = this.y;
+						//that.angle = this.angle;
+						//that.magnitude = this.magnitude;
+						
+						return Vector.fromComponents(this.x, this.y);
+					}
+					
+					// Adds a vector
+					vectorTemplate.add = function(vec) {
+						this.x += vec.x;
+						this.y += vec.y;
+						//updateAngular(this);
+						return this;
+					}
+					
+					// Subtracts a vector
+					vectorTemplate.subtract = function(vec) {
+						this.x -= vec.x;
+						this.y -= vec.y;
+						//updateAngular(this);
+						return this;
+					}
+					
+					// Rotates a vector
+					vectorTemplate.rotate = function(angle) {
+						//this.angle = clampAngle(this.angle + angle);
+						//updateComponents(this);
+						let sin = Math.sin(angle);
+						let cos = Math.cos(angle);
+						let a = cos;
+						let b = -1 * sin;
+						let c = sin;
+						let d = cos;
+						let x = this.x;
+						let y = this.y;
+						
+						this.x = x * a + y * b;
+						this.y = x * c + y * d;
+						
+						return this;
+					}
+					
+					// Scales a vector
+					vectorTemplate.scale = function(scalar) {
+						//this.magnitude *= scalar;
+						//updateComponents(this);
+						this.x *= scalar;
+						this.y *= scalar;
+						return this;
+					}
+					
+					vectorTemplate.dot = function(vec) {
+						return (this.x * vec.x) + (this.y * vec.y);
+					}
+					
+					// Update x and y components using the angle and magnitude of a vector
+					/*let updateComponents = function(vec) {
+						vec.x = vec.magnitude * Math.cos(vec.angle);
+						vec.y = vec.magnitude * Math.sin(vec.angle); 
+					}*/
+					
+					// Update the angle and magnitude using the x and y components of a vector
+					/*let updateAngular = function(vec) {
+						vec.angle = clampAngle(Math.atan2(vec.y, vec.x));
+						vec.magnitude = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+					}*/
+					
+					// Vector constructor plus wrapper functions
+					//Vector = Object.create(null);
+					Vector = function(){};
+					
+					// Creates a vector from x and y components
+					Vector.fromComponents = function(x, y) {
+						let that = createObject(vectorTemplate, Vector);
+						
+						that.x = x;
+						that.y = y;
+						//updateAngular(that);
+						
+						Object.defineProperty(that, "angle", {get(){return clampAngle(Math.atan2(this.y, this.x))}});
+						Object.defineProperty(that, "magnitude", {get(){return Math.sqrt(this.x * this.x + this.y * this.y)}});
+						
+						return that;
+					}
+					
+					// Creates a vector from an angle and magnitude
+					Vector.fromAngular = function(angle, magnitude) {
+						//let that = createObject(vectorTemplate, Vector);
+						
+						//that.angle = clampAngle(angle);
+						//that.magnitude = magnitude;
+						//updateComponents(that);
+						
+						//return that;
+						
+						let x = magnitude * Math.cos(angle);
+						let y = magnitude * Math.sin(angle);
+						return this.fromComponents(x, y);
+					}
+					
+					// Creates a vector with magnitude 1 at a given angle
+					Vector.unitVector = function(angle) {
+						return this.fromAngular(angle, 1);
+					}
+					
+					// Copies a given vector
+					Vector.copy = function(vec) {
+						return vec.copy();
+					}
+					
+					// Creates a vector from the sum of two other vectors
+					Vector.add = function(vec1, vec2) {
+						return vec1.copy().add(vec2);
+					}
+					
+					// Creates a vector by subtracting vec2 from vec1
+					Vector.subtract = function(vec1, vec2) {
+						return vec1.copy().subtract(vec2);
+					}
+					
+					// Creates a vector by rotating a vector by an angle
+					Vector.rotate = function(vec, angle) {
+						return vec.copy().rotate(angle);
+					}
+					
+					// Creates a vector by scaling a vector by a scalar
+					Vector.scale = function(vec, scalar) {
+						return vec.copy().scale(scalar);
+					}
+					
+					Vector.dot = function(vec1, vec2) {
+						return vec1.dot(vec2);
+					}
+				}
+				
+				// Point objects store an x and y coordinate
+				let Point;
+				{ // Point scope
+					// Point prototype object
+					let pointTemplate = Object.create(null);
+					
+					// Creates a copy of the point
+					pointTemplate.copy = function() {
+						return Point.create(this.x, this.y);
+					}
+					
+					// Translates a point along a vector or point
+					pointTemplate.translate = function(vec) {
+						this.x += vec.x;
+						this.y += vec.y;
+						return this;
+					}
+					
+					// Translates a point so that a given point is its new origin
+					pointTemplate.origin = function(point) {
+						this.x -= point.x;
+						this.y -= point.y;
+						return this;
+					}
+					
+					// Gets the squared distance to another point
+					pointTemplate.sqDistance = function(point) {
+						let dx = this.x - point.x;
+						let dy = this.y - point.y;
+						return dx * dx + dy * dy;
+					}
+					
+					// Gets the distance to another point
+					pointTemplate.distance = function(point) {
+						return Math.sqrt(this.sqDistance(point));
+					}
+					
+					// Gets the angle between two points
+					pointTemplate.angle = function(point) {
+						return clampAngle(Math.atan2(point.y - this.y, point.x - this.x));
+					}
+					
+					// Rotates a point about another point by a given angle
+					pointTemplate.rotate = function(point, angle) {
+						this.origin(point);
+						
+						let sin = Math.sin(angle);
+						let cos = Math.cos(angle);
+						let a = cos;
+						let b = -1 * sin;
+						let c = sin;
+						let d = cos;
+						let x = this.x;
+						let y = this.y;
+						
+						this.x = x * a + y * b;
+						this.y = x * c + y * d;
+						
+						this.translate(point);
+						return this;
+					}
+					
+					// Point constructor plus wrapper functions
+					//Point = Object.create(null);
+					Point = function(){};
+					
+					// Creates a point
+					Point.create = function(x, y) {
+						let that = createObject(pointTemplate, Point);
+						
+						that.x = x;
+						that.y = y;
+						
+						return that;
+					}
+					
+					// Creates a copy of a given point
+					Point.copy = function(p) {
+						return p.copy();
+					}
+					
+					// Creates a point by translating a point along a vector
+					Point.translate = function(point, vec) {
+						return point.copy().translate(vec);
+					}
+					
+					// Creates a point whose origin is the second given point
+					Point.origin = function(point1, point2) {
+						return point.copy().origin(point2);
+					}
+					
+					// Creates a point which is the midpoint between two points
+					Point.midpoint = function(point1, point2) {
+						return this.create((point1.x + point2.x) / 2, (point1.y + point2.y) / 2);
+					}
+					
+					Point.sqDistance = function(point1, point2) {
+						return point1.sqDistance(point2);
+					}
+					
+					// Gets the distance between two points
+					Point.distance = function(point1, point2) {
+						return point1.distance(point2);
+					}
+					
+					// Gets the angle between two points
+					Point.angle = function(point1, point2) {
+						return point1.angle(point2);
+					}
+					
+					// Creates a point which results from rotating point1 about point2 by the given angle
+					Point.rotate = function(point1, point2, angle) {
+						return point1.copy().rotate(point2, angle);
+					}
+				}
+				
+				// Wall objects store their two endpoints, a midpoint, and a normal unit vector
+				let Wall;
+				{ // Wall scope
+					//Wall prototype object
+					let wallTemplate = Object.create(null);
+					
+					// Creates a copy of the wall
+					wallTemplate.copy = function() {
+						let that = Wall.create(point1, point2);
+						
+						that.color = this.color;
+						
+						return that;
+					}
+					
+					// Rotates a wall around a point by a given angle
+					wallTemplate.rotate = function(point, angle) {
+						this.point1.rotate(point, angle);
+						this.point2.rotate(point, angle);
+						update(this);
+						
+						return this;
+					}
+					
+					wallTemplate.draw = function(canvas) {
+						let ctx = canvas.getContext("2d");
+						ctx.strokeStyle = this.color;
+						ctx.beginPath();
+						ctx.moveTo(this.point1.x, canvas.height - this.point1.y);
+						ctx.lineTo(this.point2.x, canvas.height - this.point2.y);
+						ctx.closePath();
+						ctx.stroke();
+						
+						let vecTip = Point.translate(this.midpoint, Vector.scale(this.normal, 10));
+						ctx.strokeStyle = "grey";
+						ctx.beginPath();
+						ctx.moveTo(this.midpoint.x, canvas.height - this.midpoint.y);
+						ctx.lineTo(vecTip.x, canvas.height - vecTip.y);
+						ctx.closePath();
+						ctx.stroke();
+					}
+					
+					// Updates a wall's midpoint and normal vector using the two endpoints
+					let update = function(wall) {
+						wall.midpoint = Point.midpoint(wall.point1, wall.point2);
+						
+						let angle = clampAngle(wall.point2.angle(wall.point1) - (Math.PI / 2));
+						wall.normal = Vector.unitVector(angle);
+					}
+					
+					// Wall constructor plus wrapper functions
+					Wall = function(){};
+					
+					// Creates a wall
+					Wall.create = function(point1, point2) {
+						let that = createObject(wallTemplate, Wall);
+						
+						that.point1 = point1;
+						that.point2 = point2;
+						update(that);
+						
+						that.color = "black";
+						
+						return that;
+					}
+					
+					// Creates a copy of a wall
+					Wall.copy = function(wall) {
+						return wall.copy();
+					}
+					
+					// Rotates a wall about a point by a given angle
+					Wall.rotate = function(wall, point, angle) {
+						return wall.copy().rotate(point, angle);
+					}
+				}
+				
+				// A group object stores an array of walls
+				let Group;
+				{ // Group scope
+					//Group prototype object
+					let groupTemplate = Object.create(null);
+					
+					// Adds a wall to the group
+					groupTemplate.addWall = function(wall) {
+						this.walls.push(wall);
+					}
+					
+					// Draws the walls in the group
+					groupTemplate.draw = function(canvas) {
+						this.walls.forEach(function(wall) {
+							wall.draw(canvas);
+						});
+					}
+					
+					// Group constructor plus wrapper functions
+					Group = function(){};
+					
+					// Creates an empty group
+					Group.create = function() {
+						let that = createObject(groupTemplate, Group);
+						
+						that.walls = [];
+						
+						return that;
+					}
+				}
+				
+				let Player;
+				{ // Player scope
+					//Player prototype object
+					let playerTemplate = Object.create(null);
+					
+					let player;
+					let gAngle;
+					let gMag;
+					
+					const kMaxSideVel = 50; // Maximum velocity perpendicular to gravity
+					const kSideAccel = 100; // Acceleration perpendicular to gravity
+					const kMinJumpVel = 30; // Minimum velocity opposite from gravity when jumping
+					const kJumpAccel = 300; // Acceleration opposite from gravity when jumping
+					const kMaxJFrames = 10; // Number of frames jumping lasts
+					
+					let onGround = false;
+					let jFrames = 0;
+					
+					// Draws the player on its canvas
+					playerTemplate.draw = function(canvas) {
+						let ctx = canvas.getContext("2d");
+						ctx.fillStyle = this.color;
+						ctx.beginPath();
+						//ctx.arc(this.pos.x, canvas.height - this.pos.y, this.radius, 0, Math.TAU);
+						ctx.arc(canvas.width / 2, canvas.height / 2, this.radius, 0, Math.TAU);
+						ctx.closePath();
+						ctx.fill();
+					}
+
+					// Updates the position and velocity of the player
+					playerTemplate.tick = function(group, dt) {
+						let lastPos = this.pos.copy();
+						
+						this.setAccel(gravity.copy());
+						gAngle = gravity.angle;
+						gMag = gravity.magnitude;
+						
+						if (jFrames > 0) {
+							if (keyState[38]) {
+								this.accel.add(Vector.fromAngular(gAngle + Math.PI, kJumpAccel));
+								
+								let gOAngle = gAngle - Math.PI;
+								let gOUnitVec = Vector.unitVector(gOAngle);
+								let gOVel = this.vel.dot(gOUnitVec);
+								if (gOVel < kMinJumpVel) {
+									this.vel.rotate(-1 * gOAngle);
+									this.vel.x = kMinJumpVel;
+									this.vel.rotate(gOAngle);
+								}
+								//console.log("jump", gOVel);
+							} else {
+								jFrames = 0;
+							}
+							jFrames--;
+						} else {
+							jFrames = 0;
+						}
+						
+						// Angle perpendicular to gravity
+						let gPAngle = gAngle + 0.5 * Math.PI;
+						
+						// Unit vector perpendicular to gravity
+						let gPUnitVec = Vector.unitVector(gPAngle);
+						
+						// Velocity component in the direction perpendicular to gravity
+						let gPVel = this.vel.dot(gPUnitVec);
+						
+						if (keyState[39] && gPVel <= kMaxSideVel) {
+							//this.setVel(Vector.fromAngular(this.accel.angle + Math.PI / 2, 40));
+							this.accel.add(Vector.fromAngular(gAngle + Math.PI / 2, kSideAccel));
+						}
+						if (keyState[37] && gPVel >= -1 * kMaxSideVel) {
+							//this.setVel(Vector.fromAngular(this.accel.angle - Math.PI / 2, 40));
+							this.accel.add(Vector.fromAngular(gAngle - Math.PI / 2, kSideAccel));
+						}
+						
+						//console.log("gPVel", gPVel);
+						
+						// Actually updates the velocity and position of the player
+						this.updateVel(dt);
+						
+						// Clamps side to side velocity
+						if (gPVel > kMaxSideVel) {
+							this.vel.rotate(-1 * gPAngle);
+							console.log("+ side");
+							this.vel.x = kMaxSideVel;
+							this.vel.rotate(gPAngle);
+						} else if (gPVel < -1 * kMaxSideVel) {
+							this.vel.rotate(-1 * gPAngle);
+							console.log("- side");
+							this.vel.x = -1 * kMaxSideVel;
+							this.vel.rotate(gPAngle);
+						}
+						
+						//console.log("vel x 1", this.vel.x);
+						
+						this.updatePos(dt);
+						
+						// Resets onGround flag
+						onGround = false;
+						let that = this;
+						
+						// Checks for collisions with walls
+						group.walls.forEach(function(wall) {
+							that.checkWallCollision(wall, lastPos, dt);
+						});
+						
+						// Resets jump frames if onGround is true
+						if (onGround) {
+							jFrames = kMaxJFrames;
+						}
+						
+						//console.log("vel x 2", this.vel.x);
+					}
+					
+					// Checks for the collision between the player and a wall
+					playerTemplate.checkWallCollision = function(wall, lastPos, dt) {
+						// Vector from the center of the player to its edge in the direction perpendicular to the wall
+						let pWidthVec = Vector.fromAngular(wall.normal.angle + Math.PI, this.radius);
+					
+						//let pPoint1 = Point.translate(lastPos, pWidthVec); // Player point 1
+						let pPoint1 = lastPos;
+						let pPoint2 = Point.translate(this.pos, pWidthVec); // Player point 2
+						let velLine = getABC(pPoint1, pPoint2); // Object encoding the line connecting pPoint1 and pPoint2
+						let wallLine = getABC(wall.point1, wall.point2); // Object encoding the line the wall runs across
+						let intersection = getIntersection(velLine, wallLine); // Gets the intersection between the two lines
+						
+						if (intersection.x === Infinity) { // Returns if the lines are parallel
+							return;
+						}
+						
+						// If the lines are not parallel, check if the intersection lies on the player's path and on the wall
+						let onVelLine = inRange(pPoint1.x, pPoint2.x, intersection.x) && inRange(pPoint1.y, pPoint2.y, intersection.y); // Checks if the intersection is on the player's path
+						let onWallLine = inRange(wall.point1.x, wall.point2.x, intersection.x) && inRange(wall.point1.y, wall.point2.y, intersection.y); // Checks if the intersection is on the wall
+						let collision = onVelLine && onWallLine; // True if there really is a collision, false otherwise
+						
+						// If there is no collision, return
+						if (collision) {
+							console.log("Collision!");
+						
+							let dot = gravity.dot(wall.normal) / gMag;
+							if (dot < -0.5) {
+								onGround = true;
+								//console.log(dot);
+							}
+						
+							intersection.origin(pWidthVec);
+						
+							this.handleWallCollision(wall, intersection, lastPos, pWidthVec, dt);
+							return;
+						}						
+					}
+					
+					playerTemplate.handleWallCollision = function(wall, intersection, lastPos, pWidthVec, dt) {
+						// Set the player's position to the intersection, offset by the wall's normal vector
+						let dot = this.vel.dot(wall.normal);
+						if (dot < 0) {
+							let dist = lastPos.distance(intersection);
+							let mag = this.vel.magnitude;
+							let newDt = (dt * mag - dist) / (dt * mag);
+							
+							//console.log("dist", dist, mag, newDt);
+							
+							this.vel.add(Vector.scale(wall.normal, -1 * dot));
+							this.vel.scale(0.95);
+							
+							//console.log(this.vel.x);
+							
+							this.moveTo(intersection);
+							this.updatePos(newDt);
+							
+							//console.log("true dist", this.pos.distance(lastPos));
+						}
+					}
+					
+					// Player constructor plus wrapper functions
+					Player = function(){};
+					
+					// Creates a player
+					Player.create = function() {
+						if (player) {
+							return player;
+						}
+					
+						let that = createObject(playerTemplate, Player);
+						let pos = Point.create(0, 0);
+						let vel = Vector.fromComponents(0, 0);
+						let accel = Vector.fromComponents(0, 0);
+						
+						// Moves the player to an x and y position
+						that.moveTo = function(point) {
+							pos = point;
+						}
+						
+						// Update the position of the player based on its velocity
+						that.updatePos = function(dt) {
+							//pos.x += vel.x * dt / 1000;
+							//pos.y += vel.y * dt / 1000;
+							pos.translate(Vector.scale(vel, dt / 1000));
+						}
+						
+						// Update the velocity of the player based on its acceleration
+						that.updateVel = function(dt) {
+							//vel.x += accel.x * dt / 1000;
+							//vel.y += accel.y * dt / 1000;
+							vel.add(Vector.scale(accel, dt / 1000));
+						}
+						
+						// Set the velocity of the player
+						that.setVel = function(vec) {
+							vel = vec;
+						}
+						
+						// Set the acceleration of the player
+						that.setAccel = function(vec) {
+							accel = vec;
+						}
+						
+						// Color to draw player as
+						that.color = "blue";
+						that.radius = 5;
+						
+						Object.defineProperty(that, "pos", {get(){return pos}});
+						Object.defineProperty(that, "vel", {get(){return vel}});
+						Object.defineProperty(that, "accel", {get(){return accel}});
+						
+						player = that;
+						
+						return that;
+					}
+				}
+				
+				let gravity = Vector.fromAngular(3 * Math.PI / 2, 9.8 * 10);
+				let middle = Point.create(canvas.width / 2, canvas.height / 2);
+				
+				let player1 = Player.create();
+				player1.moveTo(middle.copy());
+				player1.setAccel(gravity);
+				
+				let group1 = Group.create();
+				//group1.addWall(Wall.create(Point.translate(middle, Point.create(-50, -40)), Point.translate(middle, Point.create(50, -20))));
+				group1.addWall(Wall.create(Point.translate(middle, Point.create(-50, -20)), Point.translate(middle, Point.create(0, -40))));
+				group1.addWall(Wall.create(Point.translate(middle, Point.create(0, -40)), Point.translate(middle, Point.create(50, -20))));
+				group1.addWall(Wall.create(Point.create(0, canvas.height), Point.create(0, 0)));
+				group1.addWall(Wall.create(Point.create(0, 0), Point.create(canvas.width, 0)));
+				group1.addWall(Wall.create(Point.create(canvas.width, 0), Point.create(canvas.width, canvas.height)));
+				group1.addWall(Wall.create(Point.create(canvas.width, canvas.height), Point.create(0, canvas.height)));
+				
+				let tick = function(dt) {
+					dt = 30;
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					
+					gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10);
+					
+					player1.tick(group1, dt);
+					player1.draw(canvas);
+					
+					ctx.save();
+					ctx.translate(canvas.width / 2, canvas.height / 2);
+					ctx.rotate(0.5 * Math.PI + gravity.angle);
+					//ctx.translate(canvas.width / -2, canvas.height / -2);
+					//ctx.translate(canvas.width / 2 - player1.pos.x, player1.pos.y - canvas.height / 2);
+					ctx.translate(-1 * player1.pos.x, player1.pos.y - canvas.height);
+					group1.draw(canvas);
+					ctx.restore();
+				}
+				let frame = new AnimationFrame(tick, 60);
+				frame.start();
+				
+				/*var Plataxy = Object.create(null);
+				Plataxy.createObject = createObject;
+				Plataxy.clampAngle = clampAngle;
+				Plataxy.Vector = Vector;*/
+			//}
+			
+			window.addEventListener("keydown", function(e) {
+				keyState[e.keyCode || e.which] = true;
+			}, true);
+  
+			window.addEventListener("keyup", function(e) {
+				keyState[e.keyCode || e.which] = false;
+			}, true);
+		</script>
+	</body>
+</html>
