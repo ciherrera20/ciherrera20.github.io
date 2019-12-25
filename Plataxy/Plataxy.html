@@ -683,7 +683,7 @@
 				let middle = Point.create(canvas.width / 2, canvas.height / 2);
 				
 				let player1 = Player.create();
-				player1.moveTo(middle.copy());
+				player1.moveTo(middle.copy().translate(Point.create(0, -10)));
 				player1.setAccel(gravity);
 				
 				let group1 = Group.create();
