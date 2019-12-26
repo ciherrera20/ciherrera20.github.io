@@ -66,6 +66,41 @@
 					return Point.create(x, y);
 				}
 				
+				// Tests whether two rectangles are intersecting given two of each rectangles vertices
+				let testRectIntersection = function(point1, point2, point3, point4) {
+					let L1 = point1.x;
+					let R1 = point2.x;
+					let L2 = point3.x;
+					let R2 = point4.x;
+					
+					if (L1 > R1) {
+						L1 = R1;
+						R1 = point1.x;
+					}
+					
+					if (L2 > R2) {
+						L2 = R2;
+						R2 = point3.x;
+					}
+					
+					let B1 = point1.y;
+					let T1 = point2.y;
+					let B2 = point3.y;
+					let T2 = point4.y;
+					
+					if (B1 > T1) {
+						B1 = T1;
+						T1 = point1.y;
+					}
+					
+					if (B2 > T2) {
+						B2 = T2;
+						T2 = point3.y;
+					}
+					
+					return (L2 <= R1 && L1 <= R2) && (B2 <= T1 && B1 <= T2);
+				}
+				
 				let deltaMax = 0.0000001; // Max difference between two numbers
 				let inRange = function(lower, upper, x) {
 					let tl = lower, tu = upper;
@@ -376,13 +411,13 @@
 						ctx.closePath();
 						ctx.stroke();
 						
-						let vecTip = Point.translate(this.midpoint, Vector.scale(this.normal, 10));
+						/*let vecTip = Point.translate(this.midpoint, Vector.scale(this.normal, 10));
 						ctx.strokeStyle = "grey";
 						ctx.beginPath();
 						ctx.moveTo(this.midpoint.x, canvas.height - this.midpoint.y);
 						ctx.lineTo(vecTip.x, canvas.height - vecTip.y);
 						ctx.closePath();
-						ctx.stroke();
+						ctx.stroke();*/
 					}
 					
 					// Updates a wall's midpoint and normal vector using the two endpoints
@@ -672,6 +707,13 @@
 						//let pPoint1 = Point.translate(lastPos, pWidthVec); // Player point 1
 						let pPoint1 = lastPos;
 						let pPoint2 = Point.translate(this.pos, pWidthVec); // Player point 2
+						
+						// Tests if the rectangle made by the player's previous and current position and the rectangle made by the two segments of the wall are intersecting
+						if (!testRectIntersection(pPoint1, pPoint2, wall.point1, wall.point2)) {
+							// If they are not, there is no way the player and wall are colliding
+							return;
+						}
+						
 						let velLine = getABC(pPoint1, pPoint2); // Object encoding the line connecting pPoint1 and pPoint2
 						let wallLine = getABC(wall.point1, wall.point2); // Object encoding the line the wall runs across
 						let intersection = getIntersection(velLine, wallLine); // Gets the intersection between the two lines
@@ -809,7 +851,7 @@
 					let sAngle = 1.5 * Math.PI;
 					//let angle = 9 * Math.PI / 4;
 					let angle = 2 * Math.TAU;
-					let segments = 100;
+					let segments = 200;
 					let dAngle = angle / segments;
 					let sRadius = 20;
 					//let fRadius = Math.sqrt(Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2));
@@ -821,7 +863,7 @@
 					for (var i = 1; i <= segments; i++) {
 						let r = sRadius + dRadius * i;
 						let t = sAngle - dAngle * i;
-						console.log(r, t);
+						//console.log(r, t);
 						point2 = Point.translate(middle, Point.create(r * Math.cos(t), r * Math.sin(t)));
 						
 						group1.add(TwoSidedWall.create(point1, point2));
@@ -831,7 +873,9 @@
 				//}
 				
 				let tick = function(dt) {
-					dt = 30;
+					console.log(dt);
+				
+					dt = 33;
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 					
 					gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10);
@@ -848,7 +892,7 @@
 					group1.draw(canvas);
 					ctx.restore();
 				}
-				let frame = new AnimationFrame(tick, 60);
+				let frame = new AnimationFrame(tick, 120);
 				frame.start();
 				
 				/*var Plataxy = Object.create(null);
