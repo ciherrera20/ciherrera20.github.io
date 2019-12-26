@@ -5,7 +5,7 @@
 		<script src="../scripts/AnimationFrame.js"></script>
 	</head>
 	<body>
-		<canvas id="canvas" width="1000px" height="700px"></canvas>
+		<canvas id="canvas" width="700px" height="700px"></canvas>
 		<script>
 			//{	// Global Scope
 				Object.defineProperty(Math, "TAU", {
@@ -347,11 +347,15 @@
 					
 					// Creates a copy of the wall
 					wallTemplate.copy = function() {
-						let that = Wall.create(point1, point2);
+						let that = Wall.create(this.point1.copy(), this.point2.copy());
 						
 						that.color = this.color;
 						
 						return that;
+					}
+					
+					wallTemplate.addToGroup = function(group) {
+						group.addWall(this);
 					}
 					
 					// Rotates a wall around a point by a given angle
@@ -416,6 +420,99 @@
 					}
 				}
 				
+				// An object for a two sided wall
+				let TwoSidedWall;
+				{
+					// TwoSidedWall prototype object
+					let twoSidedWallTemplate = Object.create(null);
+					
+					twoSidedWallTemplate.copy = function() {
+						return TwoSidedWall.create(this.point1.copy(), this.point2.copy());
+					}
+					
+					twoSidedWallTemplate.addToGroup = function(group) {
+						group.addWall(this.wall1);
+						group.addWall(this.wall2);
+					}
+					
+					twoSidedWallTemplate.rotate = function(point, angle) {
+						this.wall1.rotate(point, angle);
+						this.wall2.rotate(point, angle);
+						
+						return this;
+					}
+					
+					TwoSidedWall = function(){};
+					
+					TwoSidedWall.create = function(point1, point2) {
+						let that = createObject(twoSidedWallTemplate, TwoSidedWall);
+						
+						that.wall1 = Wall.create(point1.copy(), point2.copy());
+						that.wall2 = Wall.create(point2.copy(), point1.copy());
+						
+						return that;
+					}
+					
+					TwoSidedWall.copy = function(twoSidedWall) {
+						return twoSidedWall.copy();
+					}
+					
+					TwoSidedWall.rotate = function(twoSidedWall, point, angle) {
+						return twoSidedWall.copy().rotate(point, angle);
+					}
+				}
+				
+				// An object for a box
+				let Box;
+				{
+					// Box prototype object
+					let boxTemplate = Object.create(null);
+					
+					boxTemplate.copy = function() {
+						return Box.create(this.point1.copy(), this.point2.copy());
+					}
+					
+					boxTemplate.addToGroup = function(group) {
+						group.addWall(this.wall1);
+						group.addWall(this.wall2);
+						group.addWall(this.wall3);
+						group.addWall(this.wall4);
+					}
+					
+					boxTemplate.rotate = function(point, angle) {
+						this.wall1.rotate(point, angle);
+						this.wall2.rotate(point, angle);
+						this.wall3.rotate(point, angle);
+						this.wall4.rotate(point, angle);
+						
+						return this;
+					}
+					
+					Box = function(){};
+					
+					Box.create = function(point1, point2) {
+						let that = createObject(boxTemplate, Box);
+						
+						let corner1 = Point.create(point2.x, point1.y);
+						let corner2 = Point.create(point1.x, point2.y);
+						
+						that.wall1 = Wall.create(point1.copy(), corner1.copy());
+						that.wall2 = Wall.create(corner1.copy(), point2.copy());
+						that.wall3 = Wall.create(point2.copy(), corner2.copy());
+						that.wall4 = Wall.create(corner2.copy(), point1.copy());
+						
+						return that;
+					}
+					
+					Box.copy = function(box) {
+						return box.copy();
+					}
+					
+					Box.rotate = function(box, point, angle) {
+						return box.copy().rotate(point, angle);
+					}
+				}
+				
 				// A group object stores an array of walls
 				let Group;
 				{ // Group scope
@@ -425,6 +522,10 @@
 					// Adds a wall to the group
 					groupTemplate.addWall = function(wall) {
 						this.walls.push(wall);
+					}
+					
+					groupTemplate.add = function(obj) {
+						obj.addToGroup(this);
 					}
 					
 					// Draws the walls in the group
@@ -461,6 +562,7 @@
 					const kMinJumpVel = 30; // Minimum velocity opposite from gravity when jumping
 					const kJumpAccel = 300; // Acceleration opposite from gravity when jumping
 					const kMaxJFrames = 10; // Number of frames jumping lasts
+					const kFriction = 0.95;
 					
 					let onGround = false;
 					let jFrames = 0;
@@ -531,12 +633,12 @@
 						// Clamps side to side velocity
 						if (gPVel > kMaxSideVel) {
 							this.vel.rotate(-1 * gPAngle);
-							console.log("+ side");
+							//console.log("+ side");
 							this.vel.x = kMaxSideVel;
 							this.vel.rotate(gPAngle);
 						} else if (gPVel < -1 * kMaxSideVel) {
 							this.vel.rotate(-1 * gPAngle);
-							console.log("- side");
+							//console.log("- side");
 							this.vel.x = -1 * kMaxSideVel;
 							this.vel.rotate(gPAngle);
 						}
@@ -585,7 +687,7 @@
 						
 						// If there is no collision, return
 						if (collision) {
-							console.log("Collision!");
+							//console.log("Collision!");
 						
 							let dot = gravity.dot(wall.normal) / gMag;
 							if (dot < -0.5) {
@@ -611,7 +713,7 @@
 							//console.log("dist", dist, mag, newDt);
 							
 							this.vel.add(Vector.scale(wall.normal, -1 * dot));
-							this.vel.scale(0.95);
+							this.vel.scale(kFriction);
 							
 							//console.log(this.vel.x);
 							
@@ -683,17 +785,50 @@
 				let middle = Point.create(canvas.width / 2, canvas.height / 2);
 				
 				let player1 = Player.create();
-				player1.moveTo(middle.copy().translate(Point.create(0, -10)));
+				player1.moveTo(middle.copy().translate(Point.create(0, -300)));
 				player1.setAccel(gravity);
 				
 				let group1 = Group.create();
 				//group1.addWall(Wall.create(Point.translate(middle, Point.create(-50, -40)), Point.translate(middle, Point.create(50, -20))));
-				group1.addWall(Wall.create(Point.translate(middle, Point.create(-50, -20)), Point.translate(middle, Point.create(0, -40))));
-				group1.addWall(Wall.create(Point.translate(middle, Point.create(0, -40)), Point.translate(middle, Point.create(50, -20))));
-				group1.addWall(Wall.create(Point.create(0, canvas.height), Point.create(0, 0)));
-				group1.addWall(Wall.create(Point.create(0, 0), Point.create(canvas.width, 0)));
-				group1.addWall(Wall.create(Point.create(canvas.width, 0), Point.create(canvas.width, canvas.height)));
-				group1.addWall(Wall.create(Point.create(canvas.width, canvas.height), Point.create(0, canvas.height)));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-50, -20)), Point.translate(middle, Point.create(0, -40))));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(0, -40)), Point.translate(middle, Point.create(50, -20))));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-80, -90)), Point.translate(middle, Point.create(80, -90))));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-110, -140)), Point.translate(middle, Point.create(110, -140))));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-140, -190)), Point.translate(middle, Point.create(140, -190))));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-180, -240)), Point.translate(middle, Point.create(180, -240))));
+				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-210, -290)), Point.translate(middle, Point.create(210, -290))));
+				//group1.add(Box.create(Point.translate(middle, Point.create(-20, -150)), Point.translate(middle, Point.create(20, -170))));
+				//group1.add(Box.create(Point.translate(middle, Point.create(280, -260)), Point.translate(middle, Point.create(300, -290))).rotate(Point.translate(middle, Point.create(290, -275)), -0.24 * Math.PI));
+				//group1.add(Wall.create(Point.create(0, canvas.height), Point.create(0, 0)));
+				//group1.add(Wall.create(Point.create(0, 0), Point.create(canvas.width, 0)));
+				//group1.add(Wall.create(Point.create(canvas.width, 0), Point.create(canvas.width, canvas.height)));
+				//group1.add(Wall.create(Point.create(canvas.width, canvas.height), Point.create(0, canvas.height)));
+				group1.add(Box.create(Point.create(0, 0), Point.create(canvas.width, canvas.height)));
+				
+				//{ // Scope to create the spiral
+					let sAngle = 1.5 * Math.PI;
+					//let angle = 9 * Math.PI / 4;
+					let angle = 2 * Math.TAU;
+					let segments = 100;
+					let dAngle = angle / segments;
+					let sRadius = 20;
+					//let fRadius = Math.sqrt(Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2));
+					let fRadius = 350;
+					let dRadius  = (fRadius - sRadius) / segments;
+					
+					let point1 = Point.translate(middle, Point.create(0, -1 * sRadius));
+					let point2;
+					for (var i = 1; i <= segments; i++) {
+						let r = sRadius + dRadius * i;
+						let t = sAngle - dAngle * i;
+						console.log(r, t);
+						point2 = Point.translate(middle, Point.create(r * Math.cos(t), r * Math.sin(t)));
+						
+						group1.add(TwoSidedWall.create(point1, point2));
+						
+						point1 = point2.copy();
+					}
+				//}
 				
 				let tick = function(dt) {
 					dt = 30;
