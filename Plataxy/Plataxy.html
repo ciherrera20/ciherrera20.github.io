@@ -851,7 +851,7 @@
 					let sAngle = 1.5 * Math.PI;
 					//let angle = 9 * Math.PI / 4;
 					let angle = 4 * Math.TAU;
-					let segments = 201;
+					let segments = 200;
 					let dAngle = angle / segments;
 					let sRadius = 20;
 					//let fRadius = Math.sqrt(Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2));
@@ -870,17 +870,26 @@
 						
 						point1 = point2.copy();
 					}
+					
+					segments = 20;
+					point1 = Point.translate(middle, Point.create(0, -1 * sRadius));
+					for (var i = 1; i <= segments; i++) {
+						let t = sAngle - i * Math.TAU / segments;
+						point2 = Point.translate(middle, Point.create(sRadius * Math.cos(t), sRadius * Math.sin(t)));
+						group1.add(Wall.create(point1, point2));
+						point1 = point2.copy();
+					}
 				//}
 				
 				let tick = function(dt) {
 					//console.log(dt);
 				
-					dt = 33;
+					//dt = 33;
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 					
-					gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
+					//gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
 					
-					player1.tick(group1, dt);
+					//player1.tick(group1, dt);
 					player1.draw(canvas);
 					
 					ctx.save();
@@ -894,6 +903,13 @@
 				}
 				let frame = new AnimationFrame(tick, 120);
 				frame.start();
+				
+				let physicsLoop = setInterval(function() {
+					dt = 33;
+					gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
+					//gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10);
+					player1.tick(group1, dt);
+				}, 15);
 				
 				/*var Plataxy = Object.create(null);
 				Plataxy.createObject = createObject;
