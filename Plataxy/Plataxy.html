@@ -637,6 +637,93 @@
 					}
 				}
 				
+				// An object to store gravity vectors
+				let GravityField;
+				{
+					let gravityFieldTemplate = Object.create(null);
+					
+					GravityField = function(){};
+					
+					GravityField.create = function(point1, point2, rows, cols) {
+						let that = createObject(gravityFieldTemplate, GravityField);
+						
+						let width = Math.abs(point1.x - point2.x);
+						let height = Math.abs(point1.y - point2.y);
+						
+						let dc = cols / width;
+						let dr = rows / height;
+						
+						let data = []; // Stores the gravity vectors
+						for (var i = 0; i < rows; i++) {
+							data.push([]);
+						}
+						
+						that.get = function(row, col) {
+							let vec = data[row][col];
+							return vec ? vec : Vector.fromComponents(0, 0);
+						}
+						
+						that.set = function(row, col, vec) {
+							data[row][col] = vec;
+						}
+						
+						that.getGravityVector = function(x, y) {
+							let row = Math.floor(y * dr);
+							let col = Math.floor(x * dc);
+							return this.get(row, col);
+						}
+						
+						that.setGravityVector = function(x, y, vec) {
+							let row = Math.floor(y * dr);
+							let col = Math.floor(x * dc);
+							data[row][col] = vec;
+						}
+						
+						that.toObj = function() {
+							let obj = Object.create(null);
+							
+							obj.point1 = point1.toObj();
+							obj.point2 = point2.toObj();
+							obj.rows = rows;
+							obj.cols = cols;
+							
+							obj.data = [];
+							for (var i = 0; i < rows; i++) {
+								for (var j = 0; j < cols; j++) {
+									let vec = this.get(i, j).toObj();
+									obj.data.push(vec);
+								}
+							}
+							
+							return obj;
+						}
+						
+						Object.defineProperty(that, "point1", {get(){return point1}});
+						Object.defineProperty(that, "point2", {get(){return point2}});
+						Object.defineProperty(that, "rows", {get(){return rows}});
+						Object.defineProperty(that, "columns", {get(){return columns}});
+						Object.defineProperty(that, "width", {get(){return width}});
+						Object.defineProperty(that, "height", {get(){return height}});
+						Object.defineProperty(that, "dc", {get(){return dw}});
+						Object.defineProperty(that, "dr", {get(){return dh}});
+						Object.defineProperty(that, "data", {get(){return data}});
+						
+						return that;
+					}
+					
+					GravityField.fromObj = function(obj) {
+						let that = this.create(Point.fromObj(obj.point1), Point.fromObj(obj.point2), obj.rows, obj.cols);
+						
+						for (var i = 0; i < obj.rows; i++) {
+							for (var j = 0; j < obj.cols; j++) {
+								that.set(i, j, Vector.fromObj(obj.data[i * obj.cols + j]));
+							}
+						}
+						
+						return that;
+					}
+				}
+				
 				// A group object stores an array of walls
 				let Group;
 				{ // Group scope
@@ -663,6 +750,14 @@
 						this.startingPoint = startingPoint.copy();
 					}
 					
+					groupTemplate.setStartingVel = function(startingVel) {
+						this.startingVel = startingVel.copy();
+					}
+					
+					groupTemplate.setGravityField = function(gravityField) {
+						this.gravityField = gravityField;
+					}
+					
 					groupTemplate.add = function(rawWall) {
 						this.rawWalls.push(rawWall);
 					}
@@ -687,6 +782,8 @@
 							return box.toObj();
 						});
 						obj.startingPoint = this.startingPoint.toObj();
+						obj.startingVel = this.startingVel.toObj();
+						obj.gravityField = this.gravityField.toObj();
 						return obj;
 					}
 					
@@ -711,6 +808,12 @@
 						
 						// Starting point for player
 						that.startingPoint = Point.create(0, 0);
+						
+						// Starting velocity vector for player
+						that.startingVel = Vector.fromComponents(0, 0);
+						
+						// Gravity field for the group
+						that.gravityField;
 						
 						return that;
 					}
@@ -738,6 +841,8 @@
 						}
 						
 						group.startingPoint = Point.fromObj(obj.startingPoint);
+						group.startingVel = Vector.fromObj(obj.startingVel);
+						group.gravityField = GravityField.fromObj(obj.gravityField);
 						
 						return group;
 					}
@@ -951,7 +1056,7 @@
 						
 						// Moves the player to an x and y position
 						that.moveTo = function(point) {
-							pos = point.copy();
+							pos = point;
 						}
 						
 						// Update the position of the player based on its velocity
@@ -981,7 +1086,16 @@
 						// Set the group for the player to use
 						that.setGroup = function(g) {
 							group = g;
-							this.moveTo(g.startingPoint);
+							if (g.startingPoint) {
+								this.moveTo(g.startingPoint.copy());
+							}
+							if (g.startingVel) {
+								this.setVel(g.startingVel.copy());
+							}
+						}
+						
+						that.getGroup = function() {
+							return group;
 						}
 						
 						// Color to draw player as
