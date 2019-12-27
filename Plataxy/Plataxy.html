@@ -1001,7 +1001,7 @@
 				let gravity = Vector.fromAngular(3 * Math.PI / 2, 9.8 * 10);
 				let cameraAngle = gravity.angle;
 				let maxCameraRot = Math.PI / 18;
-				let middle = Point.create(canvas.width / 2, canvas.height / 2);
+				let middle = Point.create(700 / 2, 700 / 2);
 				
 				let group1 = Group.create();
 				//group1.addWall(Wall.create(Point.translate(middle, Point.create(-50, -40)), Point.translate(middle, Point.create(50, -20))));
@@ -1018,10 +1018,10 @@
 				//group1.add(Wall.create(Point.create(0, 0), Point.create(canvas.width, 0)));
 				//group1.add(Wall.create(Point.create(canvas.width, 0), Point.create(canvas.width, canvas.height)));
 				//group1.add(Wall.create(Point.create(canvas.width, canvas.height), Point.create(0, canvas.height)));
-				group1.addBox(Box.create(Point.create(0, 0), Point.create(canvas.width, canvas.height)));
+				group1.addBox(Box.create(Point.create(0, 0), Point.create(700, 700)));
 				group1.setStartingPoint(middle.copy().translate(Point.create(0, -300)));
 				
-				/*{ // Scope to create the spiral
+				{ // Scope to create the spiral
 					let sAngle = 1.5 * Math.PI;
 					//let angle = 9 * Math.PI / 4;
 					let angle = 4 * Math.TAU;
@@ -1050,10 +1050,10 @@
 					for (var i = 1; i <= segments; i++) {
 						let t = sAngle - i * Math.TAU / segments;
 						point2 = Point.translate(middle, Point.create(sRadius * Math.cos(t), sRadius * Math.sin(t)));
-						group1.add(Wall.create(point1, point2));
+						group1.addWall(Wall.create(point1, point2));
 						point1 = point2.copy();
 					}
-				}*/
+				}
 				
 				let player1 = Player.create();
 				player1.setGroup(group1);
@@ -1097,6 +1097,17 @@
 			window.addEventListener("keyup", function(e) {
 				keyState[e.keyCode || e.which] = false;
 			}, true);
+			
+			let xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState === 4 && this.status === 200 && confirm("Use SpiralRoom?")) {
+					let gObj = JSON.parse(xhttp.responseText);
+					player1.setGroup(Group.fromObj(gObj));
+					player1.setVel(Vector.fromComponents(0, 0));
+				}
+			};
+			xhttp.open("GET", "https://ciherrera20.github.io/Plataxy/SpiralRoom.json", true);
+			xhttp.send();
 		</script>
 	</body>
 </html>
