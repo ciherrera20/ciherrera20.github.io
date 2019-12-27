@@ -5,7 +5,14 @@
 		<script src="../scripts/AnimationFrame.js"></script>
 	</head>
 	<body>
-		<canvas id="canvas" width="700px" height="700px"></canvas>
+		<canvas id="canvas"></canvas>
+		<style>
+			#canvas {
+				position: absolute;
+				top: 0px;
+				left: 0px;
+			}
+		</style>
 		<script>
 			//{	// Global Scope
 				Object.defineProperty(Math, "TAU", {
@@ -30,7 +37,25 @@
 				
 				// Clamps an angle between 0 and tau
 				let clampAngle = function(angle) {
-					return angle - Math.TAU * Math.floor(angle / Math.TAU);
+					if (0 <= angle && angle < Math.TAU) {
+						//console.trace("Angle within range");
+						return angle;
+					}
+					let phi = angle % Math.TAU;
+					return phi < 0 ? phi + Math.TAU : phi;
+					//return angle - Math.TAU * Math.floor(angle / Math.TAU);
+				}
+				
+				// Gets the smallest distance between two clamped angles
+				let angleDiff = function(alpha, beta) {
+					let phi = alpha - beta;
+					if (phi > Math.PI) {
+						return phi - Math.TAU;
+					} else if (phi < -Math.PI) {
+						return Math.TAU + phi;
+					} else {
+						return phi;
+					}
 				}
 				
 				// Gets the A, B, and C values for the line connecting the two given points
@@ -112,6 +137,12 @@
 					return tl - deltaMax <= x && x <= tu + deltaMax;
 				}
 				
+				let setCanvasDimensions = function() {
+					canvas.height = window.innerHeight;
+					canvas.width = window.innerWidth;
+				}
+				setCanvasDimensions();
+				
 				// Vector objects store an x and y component, and a magnitude and angle
 				let Vector;
 				{ // Vector scope
@@ -174,8 +205,17 @@
 						return this;
 					}
 					
+					// Gets the dot product between the vector and another given vector
 					vectorTemplate.dot = function(vec) {
 						return (this.x * vec.x) + (this.y * vec.y);
+					}
+					
+					// Turns the vector into a JSON string
+					vectorTemplate.toObj = function() {
+						let obj = Object.create(null);
+						obj.x = this.x;
+						obj.y = this.y;
+						return obj;
 					}
 					
 					// Update x and y components using the angle and magnitude of a vector
@@ -253,8 +293,13 @@
 						return vec.copy().scale(scalar);
 					}
 					
+					// Gets the dot product between two vectors
 					Vector.dot = function(vec1, vec2) {
 						return vec1.dot(vec2);
+					}
+					
+					Vector.fromObj = function(obj) {
+						return this.fromComponents(obj.x, obj.y);
 					}
 				}
 				
@@ -320,6 +365,13 @@
 						return this;
 					}
 					
+					pointTemplate.toObj = function() {
+						let obj = Object.create(null);
+						obj.x = this.x;
+						obj.y = this.y;
+						return obj;
+					}
+					
 					// Point constructor plus wrapper functions
 					//Point = Object.create(null);
 					Point = function(){};
@@ -372,6 +424,10 @@
 					Point.rotate = function(point1, point2, angle) {
 						return point1.copy().rotate(point2, angle);
 					}
+					
+					Point.fromObj = function(obj) {
+						return this.create(obj.x, obj.y);
+					}
 				}
 				
 				// Wall objects store their two endpoints, a midpoint, and a normal unit vector
@@ -390,7 +446,7 @@
 					}
 					
 					wallTemplate.addToGroup = function(group) {
-						group.addWall(this);
+						group.add(this);
 					}
 					
 					// Rotates a wall around a point by a given angle
@@ -418,6 +474,13 @@
 						ctx.lineTo(vecTip.x, canvas.height - vecTip.y);
 						ctx.closePath();
 						ctx.stroke();*/
+					}
+					
+					wallTemplate.toObj = function() {
+						let obj = Object.create(null);
+						obj.point1 = this.point1.toObj();
+						obj.point2 = this.point2.toObj();
+						return obj;
 					}
 					
 					// Updates a wall's midpoint and normal vector using the two endpoints
@@ -453,34 +516,45 @@
 					Wall.rotate = function(wall, point, angle) {
 						return wall.copy().rotate(point, angle);
 					}
+					
+					Wall.fromObj = function(obj) {
+						return this.create(Point.fromObj(obj.point1), Point.fromObj(obj.point2));
+					}
 				}
 				
 				// An object for a two sided wall
-				let TwoSidedWall;
+				let FullWall;
 				{
-					// TwoSidedWall prototype object
-					let twoSidedWallTemplate = Object.create(null);
+					// FullWall prototype object
+					let fullWallTemplate = Object.create(null);
 					
-					twoSidedWallTemplate.copy = function() {
-						return TwoSidedWall.create(this.point1.copy(), this.point2.copy());
+					fullWallTemplate.copy = function() {
+						return FullWall.create(this.point1.copy(), this.point2.copy());
 					}
 					
-					twoSidedWallTemplate.addToGroup = function(group) {
-						group.addWall(this.wall1);
-						group.addWall(this.wall2);
+					fullWallTemplate.addToGroup = function(group) {
+						group.add(this.wall1);
+						group.add(this.wall2);
 					}
 					
-					twoSidedWallTemplate.rotate = function(point, angle) {
+					fullWallTemplate.rotate = function(point, angle) {
 						this.wall1.rotate(point, angle);
 						this.wall2.rotate(point, angle);
 						
 						return this;
 					}
 					
-					TwoSidedWall = function(){};
+					fullWallTemplate.toObj = function() {
+						let obj = Object.create(null);
+						obj.point1 = this.wall1.point1.toObj();
+						obj.point2 = this.wall1.point2.toObj();
+						return obj;
+					}
 					
-					TwoSidedWall.create = function(point1, point2) {
-						let that = createObject(twoSidedWallTemplate, TwoSidedWall);
+					FullWall = function(){};
+					
+					FullWall.create = function(point1, point2) {
+						let that = createObject(fullWallTemplate, FullWall);
 						
 						that.wall1 = Wall.create(point1.copy(), point2.copy());
 						that.wall2 = Wall.create(point2.copy(), point1.copy());
@@ -488,12 +562,16 @@
 						return that;
 					}
 					
-					TwoSidedWall.copy = function(twoSidedWall) {
-						return twoSidedWall.copy();
+					FullWall.copy = function(fullWall) {
+						return fullWall.copy();
 					}
 					
-					TwoSidedWall.rotate = function(twoSidedWall, point, angle) {
-						return twoSidedWall.copy().rotate(point, angle);
+					FullWall.rotate = function(fullWall, point, angle) {
+						return fullWall.copy().rotate(point, angle);
+					}
+					
+					FullWall.fromObj = function(obj) {
+						return this.create(Point.fromObj(obj.point1), Point.fromObj(obj.point2));
 					}
 				}
 				
@@ -508,10 +586,10 @@
 					}
 					
 					boxTemplate.addToGroup = function(group) {
-						group.addWall(this.wall1);
-						group.addWall(this.wall2);
-						group.addWall(this.wall3);
-						group.addWall(this.wall4);
+						group.add(this.wall1);
+						group.add(this.wall2);
+						group.add(this.wall3);
+						group.add(this.wall4);
 					}
 					
 					boxTemplate.rotate = function(point, angle) {
@@ -521,6 +599,13 @@
 						this.wall4.rotate(point, angle);
 						
 						return this;
+					}
+					
+					boxTemplate.toObj = function() {
+						let obj = Object.create(null);
+						obj.point1 = this.wall1.point1.toObj();
+						obj.point2 = this.wall2.point2.toObj();
+						return obj;
 					}
 					
 					Box = function(){};
@@ -546,6 +631,10 @@
 					Box.rotate = function(box, point, angle) {
 						return box.copy().rotate(point, angle);
 					}
+					
+					Box.fromObj = function(obj) {
+						return this.create(Point.fromObj(obj.point1), Point.fromObj(obj.point2));
+					}
 				}
 				
 				// A group object stores an array of walls
@@ -557,17 +646,48 @@
 					// Adds a wall to the group
 					groupTemplate.addWall = function(wall) {
 						this.walls.push(wall);
+						wall.addToGroup(this);
 					}
 					
-					groupTemplate.add = function(obj) {
-						obj.addToGroup(this);
+					groupTemplate.addFullWall = function(fullWall) {
+						this.fullWalls.push(fullWall);
+						fullWall.addToGroup(this);
+					}
+					
+					groupTemplate.addBox = function(box) {
+						this.boxes.push(box);
+						box.addToGroup(this);
+					}
+					
+					groupTemplate.setStartingPoint = function(startingPoint) {
+						this.startingPoint = startingPoint.copy();
+					}
+					
+					groupTemplate.add = function(rawWall) {
+						this.rawWalls.push(rawWall);
 					}
 					
 					// Draws the walls in the group
 					groupTemplate.draw = function(canvas) {
-						this.walls.forEach(function(wall) {
+						this.rawWalls.forEach(function(wall) {
 							wall.draw(canvas);
 						});
+					}
+					
+					groupTemplate.toObj = function() {
+						let obj = Object.create(null);
+						obj = Object.create(null);
+						obj.walls = this.walls.map(function(wall) {
+							return wall.toObj();
+						});
+						obj.fullWalls = this.fullWalls.map(function(fullWall) {
+							return fullWall.toObj();
+						});
+						obj.boxes = this.boxes.map(function(box) {
+							return box.toObj();
+						});
+						obj.startingPoint = this.startingPoint.toObj();
+						return obj;
 					}
 					
 					// Group constructor plus wrapper functions
@@ -577,9 +697,49 @@
 					Group.create = function() {
 						let that = createObject(groupTemplate, Group);
 						
+						// Storage for just raw walls
+						that.rawWalls = [];
+						
+						// Storage for lone walls that are added
 						that.walls = [];
 						
+						// Storage for two sided walls
+						that.fullWalls = [];
+						
+						// Storage for boxes
+						that.boxes = [];
+						
+						// Starting point for player
+						that.startingPoint = Point.create(0, 0);
+						
 						return that;
+					}
+					
+					Group.fromObj = function(obj) {
+						let group = Group.create();
+						
+						if (obj.walls) {
+							obj.walls.forEach(function(obj) {
+								let wall = Wall.fromObj(obj);
+								group.addWall(wall);
+							});
+						}
+						if (obj.fullWalls) {
+							obj.fullWalls.forEach(function(obj) {
+								let fullWall = FullWall.fromObj(obj);
+								group.addFullWall(fullWall);
+							});
+						}
+						if (obj.boxes) {
+							obj.boxes.forEach(function(obj) {
+								let box = Box.fromObj(obj);
+								group.addBox(box);
+							});
+						}
+						
+						group.startingPoint = Point.fromObj(obj.startingPoint);
+						
+						return group;
 					}
 				}
 				
@@ -589,6 +749,7 @@
 					let playerTemplate = Object.create(null);
 					
 					let player;
+					let group;
 					let gAngle;
 					let gMag;
 					
@@ -607,14 +768,20 @@
 						let ctx = canvas.getContext("2d");
 						ctx.fillStyle = this.color;
 						ctx.beginPath();
-						//ctx.arc(this.pos.x, canvas.height - this.pos.y, this.radius, 0, Math.TAU);
 						ctx.arc(canvas.width / 2, canvas.height / 2, this.radius, 0, Math.TAU);
 						ctx.closePath();
 						ctx.fill();
+						
+						ctx.save();
+						ctx.translate(canvas.width / 2, canvas.height / 2);
+						ctx.rotate(0.5 * Math.PI + cameraAngle);
+						ctx.translate(-1 * player1.pos.x, player1.pos.y - canvas.height);
+						group.draw(canvas);
+						ctx.restore();
 					}
 
 					// Updates the position and velocity of the player
-					playerTemplate.tick = function(group, dt) {
+					playerTemplate.tick = function(dt) {
 						let lastPos = this.pos.copy();
 						
 						this.setAccel(gravity.copy());
@@ -653,11 +820,13 @@
 						
 						if (keyState[39] && gPVel <= kMaxSideVel) {
 							//this.setVel(Vector.fromAngular(this.accel.angle + Math.PI / 2, 40));
-							this.accel.add(Vector.fromAngular(gAngle + Math.PI / 2, kSideAccel));
+							//this.accel.add(Vector.fromAngular(gAngle + Math.PI / 2, kSideAccel));
+							this.accel.add(Vector.fromAngular(cameraAngle + Math.PI / 2, kSideAccel));
 						}
 						if (keyState[37] && gPVel >= -1 * kMaxSideVel) {
 							//this.setVel(Vector.fromAngular(this.accel.angle - Math.PI / 2, 40));
-							this.accel.add(Vector.fromAngular(gAngle - Math.PI / 2, kSideAccel));
+							//this.accel.add(Vector.fromAngular(gAngle - Math.PI / 2, kSideAccel));
+							this.accel.add(Vector.fromAngular(cameraAngle - Math.PI / 2, kSideAccel));
 						}
 						
 						//console.log("gPVel", gPVel);
@@ -687,7 +856,7 @@
 						let that = this;
 						
 						// Checks for collisions with walls
-						group.walls.forEach(function(wall) {
+						group.rawWalls.forEach(function(wall) {
 							that.checkWallCollision(wall, lastPos, dt);
 						});
 						
@@ -782,7 +951,7 @@
 						
 						// Moves the player to an x and y position
 						that.moveTo = function(point) {
-							pos = point;
+							pos = point.copy();
 						}
 						
 						// Update the position of the player based on its velocity
@@ -809,6 +978,12 @@
 							accel = vec;
 						}
 						
+						// Set the group for the player to use
+						that.setGroup = function(g) {
+							group = g;
+							this.moveTo(g.startingPoint);
+						}
+						
 						// Color to draw player as
 						that.color = "blue";
 						that.radius = 5;
@@ -824,30 +999,29 @@
 				}
 				
 				let gravity = Vector.fromAngular(3 * Math.PI / 2, 9.8 * 10);
+				let cameraAngle = gravity.angle;
+				let maxCameraRot = Math.PI / 18;
 				let middle = Point.create(canvas.width / 2, canvas.height / 2);
-				
-				let player1 = Player.create();
-				player1.moveTo(middle.copy().translate(Point.create(0, -300)));
-				player1.setAccel(gravity);
 				
 				let group1 = Group.create();
 				//group1.addWall(Wall.create(Point.translate(middle, Point.create(-50, -40)), Point.translate(middle, Point.create(50, -20))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-50, -20)), Point.translate(middle, Point.create(0, -40))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(0, -40)), Point.translate(middle, Point.create(50, -20))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-80, -90)), Point.translate(middle, Point.create(80, -90))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-110, -140)), Point.translate(middle, Point.create(110, -140))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-140, -190)), Point.translate(middle, Point.create(140, -190))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-180, -240)), Point.translate(middle, Point.create(180, -240))));
-				//group1.add(TwoSidedWall.create(Point.translate(middle, Point.create(-210, -290)), Point.translate(middle, Point.create(210, -290))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(-50, -20)), Point.translate(middle, Point.create(0, -40))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(0, -40)), Point.translate(middle, Point.create(50, -20))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(-80, -90)), Point.translate(middle, Point.create(80, -90))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(-110, -140)), Point.translate(middle, Point.create(110, -140))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(-140, -190)), Point.translate(middle, Point.create(140, -190))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(-180, -240)), Point.translate(middle, Point.create(180, -240))));
+				//group1.add(FullWall.create(Point.translate(middle, Point.create(-210, -290)), Point.translate(middle, Point.create(210, -290))));
 				//group1.add(Box.create(Point.translate(middle, Point.create(-20, -150)), Point.translate(middle, Point.create(20, -170))));
 				//group1.add(Box.create(Point.translate(middle, Point.create(280, -260)), Point.translate(middle, Point.create(300, -290))).rotate(Point.translate(middle, Point.create(290, -275)), -0.24 * Math.PI));
 				//group1.add(Wall.create(Point.create(0, canvas.height), Point.create(0, 0)));
 				//group1.add(Wall.create(Point.create(0, 0), Point.create(canvas.width, 0)));
 				//group1.add(Wall.create(Point.create(canvas.width, 0), Point.create(canvas.width, canvas.height)));
 				//group1.add(Wall.create(Point.create(canvas.width, canvas.height), Point.create(0, canvas.height)));
-				group1.add(Box.create(Point.create(0, 0), Point.create(canvas.width, canvas.height)));
+				group1.addBox(Box.create(Point.create(0, 0), Point.create(canvas.width, canvas.height)));
+				group1.setStartingPoint(middle.copy().translate(Point.create(0, -300)));
 				
-				//{ // Scope to create the spiral
+				/*{ // Scope to create the spiral
 					let sAngle = 1.5 * Math.PI;
 					//let angle = 9 * Math.PI / 4;
 					let angle = 4 * Math.TAU;
@@ -866,7 +1040,7 @@
 						//console.log(r, t);
 						point2 = Point.translate(middle, Point.create(r * Math.cos(t), r * Math.sin(t)));
 						
-						group1.add(TwoSidedWall.create(point1, point2));
+						group1.addFullWall(FullWall.create(point1, point2));
 						
 						point1 = point2.copy();
 					}
@@ -879,43 +1053,42 @@
 						group1.add(Wall.create(point1, point2));
 						point1 = point2.copy();
 					}
-				//}
+				}*/
+				
+				let player1 = Player.create();
+				player1.setGroup(group1);
 				
 				let tick = function(dt) {
-					//console.log(dt);
-				
-					//dt = 33;
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 					
-					//gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
+					let gAngle = gravity.angle;
+					let phi = angleDiff(gAngle, cameraAngle);
+					if (Math.abs(phi) > maxCameraRot) {
+						cameraAngle = phi > 0 ? clampAngle(cameraAngle + maxCameraRot) : clampAngle(cameraAngle - maxCameraRot);
+					} else {
+						cameraAngle = gAngle;
+					}
 					
-					//player1.tick(group1, dt);
 					player1.draw(canvas);
-					
-					ctx.save();
-					ctx.translate(canvas.width / 2, canvas.height / 2);
-					ctx.rotate(0.5 * Math.PI + gravity.angle);
-					//ctx.translate(canvas.width / -2, canvas.height / -2);
-					//ctx.translate(canvas.width / 2 - player1.pos.x, player1.pos.y - canvas.height / 2);
-					ctx.translate(-1 * player1.pos.x, player1.pos.y - canvas.height);
-					group1.draw(canvas);
-					ctx.restore();
 				}
 				let frame = new AnimationFrame(tick, 120);
 				frame.start();
 				
-				let physicsLoop = setInterval(function() {
+				let physicsTick = function() {
 					dt = 33;
 					gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
 					//gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10);
-					player1.tick(group1, dt);
-				}, 15);
+					player1.tick(dt);
+				}
+				let physicsInterval = setInterval(physicsTick, 15);
 				
 				/*var Plataxy = Object.create(null);
 				Plataxy.createObject = createObject;
 				Plataxy.clampAngle = clampAngle;
 				Plataxy.Vector = Vector;*/
 			//}
+			
+			window.addEventListener("resize", setCanvasDimensions, false);
 			
 			window.addEventListener("keydown", function(e) {
 				keyState[e.keyCode || e.which] = true;
