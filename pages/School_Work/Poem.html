@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Love Poem</title>
+	</head>
+	<body>
+		<h1 class="flexbox">For Whose Sake?</h1>
+		<h3 class="flexbox">(Click to skip animations)</h3>
+		<hr>
+		<h3 class="flexbox" data-transition="true">Romance</h3>
+		<p class="flexbox" data-transition="true">Love or infatuation?</p>
+		<p class="flexbox" data-transition="true">At the beginning they feel the same</p>
+		<p class="flexbox" data-transition="true">Only time can differentiate</p>
+		<p class="flexbox" data-transition="true">Puppy love is not complete</p>
+		<hr data-transition="true">
+		<h3 class="flexbox" data-transition="true">Reality</h3>
+		<p class="flexbox" data-transition="true">Will being vulnerable pay off?</p>
+		<p class="flexbox" data-transition="true">Uh oh there’s an obstacle</p>
+		<p class="flexbox" data-transition="true">A previous rejection gets in the way</p>
+		<p class="flexbox" data-transition="true">Complacency is a dead end</p>
+		<hr data-transition="true">
+		<h3 class="flexbox" data-transition="true">Reaction & Resistance</h3>
+		<p class="flexbox" data-transition="true">Why am I walking a one way street?</p>
+		<p class="flexbox" data-transition="true">Time is ticking by</p>
+		<p class="flexbox" data-transition="true">The road ahead won’t be easy</p>
+		<p class="flexbox" data-transition="true">But we’ll fight through</p>
+		<hr data-transition="true">
+		<h3 class="flexbox" data-transition="true">Reflection & Renewal</h3>
+		<p class="flexbox" data-transition="true">I’m sorry I couldn’t hear you</p>
+		<p class="flexbox" data-transition="true">I’ve swallowed my pride</p>
+		<p class="flexbox" data-transition="true">Will we get the chance</p>
+		<p class="flexbox" data-transition="true">To revisit that early love?</p>
+		<p>By Christopher Herrera</p>
+	</body>
+	<style>
+		body {
+			background: #ffffff;
+			background-image: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.5)), url("../../images/School_Work/Taiga and Ryuji.png");
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: top center;
+			overflow-y: overlay !important;
+			overflow-x: hidden;
+		}
+		
+		/* width */
+		::-webkit-scrollbar {
+			width: 20px;
+		}
+
+		/* Track */
+		::-webkit-scrollbar-track {
+			background: rgba(80, 80, 80, 0.2);
+		}
+
+		/* Handle */
+		::-webkit-scrollbar-thumb {
+			border-radius: 10px;
+			background: rgba(80, 80, 80, 0.3); 
+		}
+
+		/* Handle on hover */
+		::-webkit-scrollbar-thumb:hover {
+			background: rgba(80, 80, 80, 0.5); 
+		}
+		
+		.flexbox
+		{
+			border: none;
+			position: relative;
+			display: flex;
+			flex-flow: row wrap;
+			align-items: flex-start;
+			justify-content: center;
+			space-between: space-around;
+		}
+		
+		.flexbox > *
+		{
+			flex: 0 0 auto;
+		}
+		
+		h1, h3 {
+			font-family: Courier;
+			text-shadow: 0px 0px 4px white;
+		}
+		
+		*[data-transition=true] {
+			opacity: 0;
+			-webkit-transition: 5s;
+			transition: opacity 5s;
+			transition-timing-function: ease in;
+			font-family: Courier;
+			font-weight: 900;
+			text-shadow: 0px 0px 4px white;
+		}
+		
+		*[data-transition=false] {
+			opacity: 1;
+			font-family: Courier;
+			font-weight: 900;
+			text-shadow: 0px 0px 4px white;
+		}
+	</style>
+	
+	<script>
+		var ps = document.querySelectorAll("[data-transition]");
+		ps.index = 0;
+		ps.showNext = function() {
+			ps[ps.index].style.opacity = 1;
+			ps.index++;
+			if (ps.index >= ps.length) {
+				clearInterval(ps.interval);
+			}
+		}
+		
+		ps.interval = setInterval(ps.showNext, 1500);
+		
+		window.addEventListener("click", function(){
+			var newIndex = ps.length;
+			console.log(newIndex);
+			clearInterval(ps.interval);
+			for (var i = ps.index || ps.index + 1; i < newIndex + 1; i++) {
+				ps[i - 1].setAttribute("data-transition", "false");
+			}
+		});
+	</script>
+</html>

@@ -652,6 +652,8 @@
 						
 						let dc = cols / width;
 						let dr = rows / height;
+						let dw = width / cols;
+						let dh = height / rows;
 						
 						let data = []; // Stores the gravity vectors
 						for (var i = 0; i < rows; i++) {
@@ -660,17 +662,53 @@
 						
 						that.get = function(row, col) {
 							let vec = data[row][col];
-							return vec ? vec : Vector.fromComponents(0, 0);
+							if (!vec) {
+								vec = Vector.fromComponents(0, 0);
+								data[row][col] = vec;
+							}
+							return vec;
 						}
 						
 						that.set = function(row, col, vec) {
 							data[row][col] = vec;
 						}
 						
+						let wAvg = function(x1, x2, dx, nx) {
+							return dx * x2 + nx * x1;
+						}
+						
 						that.getGravityVector = function(x, y) {
 							let row = Math.floor(y * dr);
 							let col = Math.floor(x * dc);
-							return this.get(row, col);
+							
+							let fx = col * dw;
+							let fy = row * dh;
+							let dx = (x - fx) / dw;
+							let dy = (y - fy) / dh;
+							let nx = 1 - dx;
+							let ny = 1 - dy;
+							
+							let vec00 = this.get(row, col);
+							let vec01 = this.get(row, col + 1);
+							let vec10 = this.get(row + 1, col);
+							let vec11 = this.get(row + 1, col + 1);
+							
+							let ix1 = wAvg(vec00.x, vec01.x, dx, nx);
+							let ix2 = wAvg(vec10.x, vec11.x, dx, nx);
+							let gx = wAvg(ix1, ix2, dy, ny);
+							
+							let iy1 = wAvg(vec00.y, vec01.y, dy, ny);
+							let iy2 = wAvg(vec10.y, vec11.y, dy, ny);
+							let gy = wAvg(iy1, iy2, dx, nx);
+							
+							//console.log(x, y, dx, dy, nx, ny);
+							//console.log(vec00);
+							//console.log(vec01);
+							//console.log(vec10);
+							//console.log(vec11);
+							
+							return Vector.fromComponents(gx, gy);
+							//return vec00;
 						}
 						
 						that.setGravityVector = function(x, y, vec) {
@@ -855,6 +893,7 @@
 					
 					let player;
 					let group;
+					let gravity;
 					let gAngle;
 					let gMag;
 					
@@ -889,9 +928,13 @@
 					playerTemplate.tick = function(dt) {
 						let lastPos = this.pos.copy();
 						
+						gravity = group.gravityField.getGravityVector(this.pos.x, this.pos.y);
+						
 						this.setAccel(gravity.copy());
 						gAngle = gravity.angle;
 						gMag = gravity.magnitude;
+						
+						//console.log(gMag, gAngle * 180 / Math.PI);
 						
 						if (jFrames > 0) {
 							if (keyState[38]) {
@@ -926,12 +969,12 @@
 						if (keyState[39] && gPVel <= kMaxSideVel) {
 							//this.setVel(Vector.fromAngular(this.accel.angle + Math.PI / 2, 40));
 							//this.accel.add(Vector.fromAngular(gAngle + Math.PI / 2, kSideAccel));
-							this.accel.add(Vector.fromAngular(cameraAngle + Math.PI / 2, kSideAccel));
+							this.accel.add(Vector.fromAngular(gAngle + Math.PI / 2, kSideAccel));
 						}
 						if (keyState[37] && gPVel >= -1 * kMaxSideVel) {
 							//this.setVel(Vector.fromAngular(this.accel.angle - Math.PI / 2, 40));
 							//this.accel.add(Vector.fromAngular(gAngle - Math.PI / 2, kSideAccel));
-							this.accel.add(Vector.fromAngular(cameraAngle - Math.PI / 2, kSideAccel));
+							this.accel.add(Vector.fromAngular(gAngle - Math.PI / 2, kSideAccel));
 						}
 						
 						//console.log("gPVel", gPVel);
@@ -1098,6 +1141,10 @@
 							return group;
 						}
 						
+						that.getGravity = function() {
+							return gravity;
+						}
+						
 						// Color to draw player as
 						that.color = "blue";
 						that.radius = 5;
@@ -1112,8 +1159,8 @@
 					}
 				}
 				
-				let gravity = Vector.fromAngular(3 * Math.PI / 2, 9.8 * 10);
-				let cameraAngle = gravity.angle;
+				//let gravity = Vector.fromAngular(3 * Math.PI / 2, 9.8 * 10);
+				let cameraAngle = 1.5 * Math.PI;
 				let maxCameraRot = Math.PI / 18;
 				let middle = Point.create(700 / 2, 700 / 2);
 				
@@ -1134,6 +1181,9 @@
 				//group1.add(Wall.create(Point.create(canvas.width, canvas.height), Point.create(0, canvas.height)));
 				group1.addBox(Box.create(Point.create(0, 0), Point.create(700, 700)));
 				group1.setStartingPoint(middle.copy().translate(Point.create(0, -300)));
+				let gravityField = GravityField.create(Point.create(0, 0), Point.create(700, 700), 1, 1);
+				gravityField.set(0, 0, Vector.fromComponents(0, -98));
+				group1.setGravityField(gravityField);
 				
 				{ // Scope to create the spiral
 					let sAngle = 1.5 * Math.PI;
@@ -1175,13 +1225,21 @@
 				let tick = function(dt) {
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 					
-					let gAngle = gravity.angle;
+					let gravity = player1.getGravity();
+					//let gravity = player1.getGroup().gravityField.getGravityVector(player1.pos.x, player1.pos.y);
+					//let g2 = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10);
+					/*let gAngle = gravity.angle;
 					let phi = angleDiff(gAngle, cameraAngle);
 					if (Math.abs(phi) > maxCameraRot) {
 						cameraAngle = phi > 0 ? clampAngle(cameraAngle + maxCameraRot) : clampAngle(cameraAngle - maxCameraRot);
 					} else {
 						cameraAngle = gAngle;
-					}
+					}*/
+					
+					cameraAngle = gravity.angle;
+					
+					console.log(gravity.magnitude, gravity.angle * 180 / Math.PI);
+					//console.log(gravity.magnitude - g2.magnitude, (gravity.angle - g2.angle) * 180 / Math.PI);
 					
 					player1.draw(canvas);
 				}
@@ -1190,7 +1248,7 @@
 				
 				let physicsTick = function() {
 					dt = 33;
-					gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
+					//gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10 * (Point.distance(middle, player1.pos) - 175) / 175);
 					//gravity = Vector.fromAngular(Point.angle(middle, player1.pos), 9.8 * 10);
 					player1.tick(dt);
 				}
