@@ -102,12 +102,10 @@ var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||f
 	</div>
 	<!-- UUID://18AEC4EA-5935-4E60-B4D1-230085BA63D2// --><tw-storydata name="Mass Precipitate Lab" startnode="9" creator="Tweego" creator-version="2.1.1+81d1d71" ifid="18AEC4EA-5935-4E60-B4D1-230085BA63D2" zoom="1" format="SugarCube" format-version="2.30.0" options="" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">/* twine-user-stylesheet #1: "notepad.css" */
 #notepad {
-    height: 30vh;
     padding: 0;
     margin: 0;
     margin-left: 17.5em;
-    transition: margin-left 200ms ease-in;
-    transition: height 200ms ease-in;
+    transition: margin-left 200ms ease-in, height 200ms ease-in;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -119,7 +117,7 @@ var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||f
 }
 
 #notepad.notransition {
-    transition: none !important;
+    transition: margin-left 200ms ease-in;
 }
 
 #ui-bar.stowed ~ #notepad {
