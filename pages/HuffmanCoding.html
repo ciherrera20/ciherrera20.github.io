@@ -24,10 +24,6 @@
 			var upload = document.getElementById("upload");
 			var textarea = document.getElementsByTagName("textarea")[0];
 			var downloadBin = document.getElementById("downloadBin");
-			
-			//var bitArray;
-			var arrayBuffer;
-			var dcMsg;
 			var fileName;
 			
 			upload.addEventListener("change", function(e) {
@@ -36,48 +32,25 @@
 				var fileReader = new FileReader();
 				var extension = file.name.match(/\.[0-9a-z]+$/i);
 				
-				fileReader.onload = function(e) {
-					if (extension[0] === ".txt") {
-						console.log("Loading text file...");
-						textarea.value = fileReader.result;
-					} else {
-						console.log("Start decoding...");
-						arrayBuffer = fileReader.result;
-						//var dataView = new DataView(fileReader.result);
-						//bitArray = new BitArray(dataView);
-						//dcMsg = decompressFromBitArray(bitArray);
-						dcMsg = decodeBuffer(arrayBuffer);
-						console.log("Decoding finished");
-						textarea.value = dcMsg;
-					}
-				};
-				
 				console.log(`File of type ${extension[0]} uploaded`);
 				
 				if (extension[0] === ".txt") {
-					fileReader.readAsText(file);
+					HCFile.fromFile(file, true).then(function(hcFile) {
+						textarea.value = hcFile.toString();
+					});
 				} else {
-					fileReader.readAsArrayBuffer(file);
+					HCFile.fromFile(file).then(function(hcFile) {
+						textarea.value = hcFile.decompress().toString();
+					});
 				}
-				/*if (extension[0] !== ".bin" || extension[0] !== ".net")
-					fileReader.readAsText(file);
-				else
-					fileReader.readAsArrayBuffer(file);*/
 			});
 			
 			downloadBin.onclick = function() {
-				//downloadBitArray(compressToBitArray(textarea.value), fileName + ".bin");
-				downloadHuffmanBin(encodeToBuffer(textarea.value), fileName + ".bin");
+				new HCFile(textarea.value).compress().download(fileName + ".bin");
 			}
 			
 			downloadTxt.onclick = function() {
-				let blob = new Blob([textarea.value], {type: "text/plain"});
-				let url = window.URL.createObjectURL(blob);
-				let a = document.createElement("a");
-				a.href = url;
-				a.download = fileName + ".txt";
-				a.click();
-				window.URL.revokeObjectURL(url);
+				new HCFile(textarea.value).download(fileName + ".txt")
 			}
 		</script>
 	</body>
