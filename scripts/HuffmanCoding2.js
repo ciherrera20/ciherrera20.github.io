@@ -268,11 +268,11 @@ var HCFile = (function() {
 	 * Encodes a string into an ArrayBuffer using Huffman Coding
 	 * First, a Huffman Tree is generated from the string
 	 * The string is then traversed, and each character's encodings are added into a Uint8Array
-	 * A 4 byte header, the Uint8Array encoding of the tree, and the Uint8Array encoding of the string are the inputs for a blob object
+	 * A 4 byte header, the Uint8Array encoding of the tree, and the Uint8Array encoding of the string are combined into a final ArrayBuffer
 	 *
 	 * @param str				The string to encode
 	 *
-	 * @return					The blob representing the Huffman Coding of the string
+	 * @return					The ArrayBuffer representing the Huffman Coding of the string
 	 */
 	function encodeString(str) {
 		// Gets the Huffman Tree for the string
