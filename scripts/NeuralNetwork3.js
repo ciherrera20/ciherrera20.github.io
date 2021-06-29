@@ -204,7 +204,7 @@ if (!console.blog)
 		} else if (type === "")
 	}*/
 	
-	/** 
+	/**
 	 * Template for a generic layer. 
 	 * Implements functions setInput and setFeedbackInput
 	 * Requires implementations of validateInput, validateFeedbackInput, compute, and computeFeedback
